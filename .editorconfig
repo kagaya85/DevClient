@@ -3,6 +3,6 @@ root = true
 [*]
 indent_style = space
 indent_size = 4
-charset = utf-8
+charset = gbk
 trim_trailing_whitespace = false
 insert_final_newline = false
