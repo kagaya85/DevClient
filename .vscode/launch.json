@@ -5,10 +5,10 @@
                 "name": "(gdb) Launch",
                 "type": "cppdbg",
                 "request": "launch",
-                "program": "/mnt/c/Repos/DevClient/ts",
+                "program": "/mnt/e/Repos/DevClient/ts",
                 "args": ["-fThreading"],
                 "stopAtEntry": true,
-                "cwd": "/mnt/c/Repos/DevClient/",
+                "cwd": "/mnt/e/Repos/DevClient/src",
                 "environment": [],
                 "externalConsole": true,
                 "windows": {
@@ -30,6 +30,7 @@
                 },
                 "sourceFileMap": {
                     "/mnt/c": "${env:systemdrive}/",
+                    "/mnt/e": "e:/",
                 }
             }
         ]
