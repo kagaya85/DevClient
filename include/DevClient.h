@@ -1,7 +1,7 @@
 #ifndef DEVCLIENT
 #define DEVCLIENT
 
-#include "defines.h"
+#include "Defines.h"
 
 class DevClient
 {

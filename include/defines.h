@@ -12,16 +12,16 @@
 #define DBG_RDATA 0x4
 
 struct Config {
-    std::string serverIp;    // æœåŠ¡å™¨IP
+    std::string serverIp;    // ·şÎñÆ÷IP
     int port;
-    bool sucExt;       // è¿›ç¨‹æ¥å—æˆåŠŸåé€€å‡º 1ï¼šé€€å‡º 0ï¼šé—´éš”è‹¥å¹²æ—¶é—´å†æ¬¡å‘é€
-    int minClinum;   // æœ€å°é…ç½®ç»ˆç«¯æ•°é‡
-    int maxClinum;   // æœ€å¤§é…ç½®ç»ˆç«¯æ•°é‡
-    int minScrnum;  // æ¯ä¸ªç»ˆç«¯æœ€å°è™šå±æ•°é‡
-    int maxScrnum;  // æ¯ä¸ªç»ˆç«¯æœ€å¤§è™šå±æ•°é‡
-    bool delLog;    // åˆ é™¤æ—¥å¿—æ–‡ä»¶
-    unsigned char debug;    // DEBUG è®¾ç½®
-    bool showDbg;   // DEBUG å±å¹•æ˜¾ç¤º
+    bool sucExt;       // ½ø³Ì½ÓÊÜ³É¹¦ºóÍË³ö 1£ºÍË³ö 0£º¼ä¸ôÈô¸ÉÊ±¼äÔÙ´Î·¢ËÍ
+    int minClinum;   // ×îĞ¡ÅäÖÃÖÕ¶ËÊıÁ¿
+    int maxClinum;   // ×î´óÅäÖÃÖÕ¶ËÊıÁ¿
+    int minScrnum;  // Ã¿¸öÖÕ¶Ë×îĞ¡ĞéÆÁÊıÁ¿
+    int maxScrnum;  // Ã¿¸öÖÕ¶Ë×î´óĞéÆÁÊıÁ¿
+    bool delLog;    // É¾³ıÈÕÖ¾ÎÄ¼ş
+    unsigned char debug;    // DEBUG ÉèÖÃ
+    bool showDbg;   // DEBUG ÆÁÄ»ÏÔÊ¾
 };
 
 #endif // !DEFINES

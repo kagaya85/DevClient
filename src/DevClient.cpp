@@ -1,24 +1,25 @@
+#include <fstream>
+#include <iomanip>
 #include <iostream>
-#include <unistd.h>
+#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/wait.h>
 #include <sys/types.h>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include "defines.h"
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include "DevClient.h"
+#include "Defines.h"
+#include "Logger.h"
 
 using namespace std;
 
-DevClient::DevClient(Config config)
-{
-}
+// È«¾ÖÅäÖÃ±äÁ¿
+Config g_config;
 
-DevClient::~DevClient()
-{
-}
+DevClient::DevClient(Config config) {}
+
+DevClient::~DevClient() {}
 
 string &trim(string &str)
 {
@@ -51,15 +52,15 @@ void readConfig(Config *config)
     string buf;
 
     config->serverIp = "192.168.1.246";
-    config->port = 0;
-    config->sucExt = 1;       // è¿›ç¨‹æŽ¥å—æˆåŠŸåŽé€€å‡º 1ï¼šé€€å‡º 0ï¼šé—´éš”è‹¥å¹²æ—¶é—´å†æ¬¡å‘é€
-    config->minClinum = 0;    // æœ€å°é…ç½®ç»ˆç«¯æ•°é‡
-    config->maxClinum = 0;    // æœ€å¤§é…ç½®ç»ˆç«¯æ•°é‡
-    config->minScrnum = 0;    // æ¯ä¸ªç»ˆç«¯æœ€å°è™šå±æ•°é‡
-    config->maxScrnum = 0;    // æ¯ä¸ªç»ˆç«¯æœ€å¤§è™šå±æ•°é‡
-    config->delLog = 0;       // åˆ é™¤æ—¥å¿—æ–‡ä»¶
-    config->debug = 0; // DEBUG è®¾ç½®
-    config->showDbg = 0;      // DEBUG å±å¹•æ˜¾ç¤º
+    config->port = 40275;
+    config->sucExt = 1;     // ½ø³Ì½ÓÊÜ³É¹¦ºóÍË³ö 1£ºÍË³ö 0£º¼ä¸ôÈô¸ÉÊ±¼äÔÙ´Î·¢ËÍ
+    config->minClinum = 5;  // ×îÐ¡ÅäÖÃÖÕ¶ËÊýÁ¿
+    config->maxClinum = 28; // ×î´óÅäÖÃÖÕ¶ËÊýÁ¿
+    config->minScrnum = 3;  // Ã¿¸öÖÕ¶Ë×îÐ¡ÐéÆÁÊýÁ¿
+    config->maxScrnum = 10; // Ã¿¸öÖÕ¶Ë×î´óÐéÆÁÊýÁ¿
+    config->delLog = 0;     // É¾³ýÈÕÖ¾ÎÄ¼þ
+    config->debug = 0;      // DEBUG ÉèÖÃ
+    config->showDbg = 0;    // DEBUG ÆÁÄ»ÏÔÊ¾
 
     while (!fin.eof())
     {
@@ -68,48 +69,92 @@ void readConfig(Config *config)
         getline(fin, buf);
         istringstream sin(trim(buf));
         tmp = sin.peek();
+
+        int only_once[10] = {0};
         if (tmp - '#')
         {
             sin >> item >> value;
-            if (item == "æœåŠ¡å™¨IPåœ°å€")
+            if (item == "·þÎñÆ÷IPµØÖ·")
             {
+                if (only_once[0])
+                    continue;
                 config->serverIp = value;
+                only_once[0] = 1;
             }
-            else if (item == "ç«¯å£å·")
+            else if (item == "¶Ë¿ÚºÅ")
             {
+                if (only_once[1])
+                    continue;
                 config->port = stoi(value);
+                only_once[1] = 1;
             }
-            else if (item == "è¿›ç¨‹æŽ¥æ”¶æˆåŠŸåŽé€€å‡º")
+            else if (item == "½ø³Ì½ÓÊÕ³É¹¦ºóÍË³ö")
             {
+                if (only_once[2])
+                    continue;
                 config->sucExt = value == "1" ? true : false;
+                only_once[2] = 1;
             }
-            else if (item == "æœ€å°é…ç½®ç»ˆç«¯æ•°é‡")
+            else if (item == "×îÐ¡ÅäÖÃÖÕ¶ËÊýÁ¿")
             {
-                config->minClinum = stoi(value);
+                if (only_once[3])
+                    continue;
+                int v = stoi(value);
+                if (v < 3 || v > 10)
+                    v = 5;
+                config->minClinum = v;
+                only_once[3] = 1;
             }
-            else if (item == "æœ€å¤§é…ç½®ç»ˆç«¯æ•°é‡")
+            else if (item == "×î´óÅäÖÃÖÕ¶ËÊýÁ¿")
             {
-                config->maxClinum = stoi(value);
+                if (only_once[4])
+                    continue;
+                int v = stoi(value);
+                if (v < 10 || v > 50)
+                    v = 5;
+                config->maxClinum = v;
+                only_once[4] = 1;
             }
-            else if (item == "æ¯ä¸ªç»ˆç«¯æœ€å°è™šå±æ•°é‡")
+            else if (item == "Ã¿¸öÖÕ¶Ë×îÐ¡ÐéÆÁÊýÁ¿")
             {
-                config->minScrnum = stoi(value);
+                if (only_once[5])
+                    continue;
+                int v = stoi(value);
+                if (v < 1 || v > 3)
+                    v = 3;
+                config->minScrnum = v;
+                only_once[5] = 1;
             }
-            else if (item == "æ¯ä¸ªç»ˆç«¯æœ€å¤§è™šå±æ•°é‡")
+            else if (item == "Ã¿¸öÖÕ¶Ë×î´óÐéÆÁÊýÁ¿")
             {
-                config->maxScrnum = stoi(value);
+                if (only_once[6])
+                    continue;
+                int v = stoi(value);
+                if (v < 4 || v >= 16)
+                    v = 10;
+                config->maxScrnum = v;
+                only_once[6] = 1;
             }
-            else if (item == "åˆ é™¤æ—¥å¿—æ–‡ä»¶")
+            else if (item == "É¾³ýÈÕÖ¾ÎÄ¼þ")
             {
+                if (only_once[7])
+                    continue;
                 config->delLog = value == "1" ? true : false;
+                only_once[7] = 1;
             }
-            else if (item == "DEBUGè®¾ç½®")
+            else if (item == "DEBUGÉèÖÃ")
             {
+                if (only_once[8])
+                    continue;
                 config->debug = data2bin(value.c_str());
+                only_once[8] = 1;
             }
-            else if (item == "DEBUGå±å¹•æ˜¾ç¤º")
+            else if (item == "DEBUGÆÁÄ»ÏÔÊ¾")
             {
+                if (only_once[9])
+                    continue;
                 config->showDbg = value == "1" ? true : false;
+                only_once[9] = 1;
             }
         }
     }
@@ -161,32 +206,32 @@ string dbgString(const unsigned char debug)
 
 void showConfig(ostream &out, Config &config)
 {
-    out << left << "å½“å‰é…ç½®å¦‚ä¸‹:" << endl;
-    out << left << setw(30) << "\tæœåŠ¡å™¨IPåœ°å€"
+    out << left << "µ±Ç°ÅäÖÃÈçÏÂ:" << endl;
+    out << left << setw(30) << "\t·þÎñÆ÷IPµØÖ·"
         << ": " << config.serverIp << endl;
-    out << left << setw(30) << "\tç«¯å£å·"
+    out << left << setw(30) << "\t¶Ë¿ÚºÅ"
         << ": " << config.port << endl;
-    out << left << setw(30) << "\tè¿›ç¨‹æŽ¥å—æˆåŠŸåŽé€€å‡º"
+    out << left << setw(30) << "\t½ø³Ì½ÓÊÜ³É¹¦ºóÍË³ö"
         << ": " << config.sucExt << endl;
-    out << left << setw(30) << "\tæœ€å°é…ç½®ç»ˆç«¯æ•°é‡"
+    out << left << setw(30) << "\t×îÐ¡ÅäÖÃÖÕ¶ËÊýÁ¿"
         << ": " << config.minClinum << endl;
-    out << left << setw(30) << "\tæœ€å¤§é…ç½®ç»ˆç«¯æ•°é‡"
+    out << left << setw(30) << "\t×î´óÅäÖÃÖÕ¶ËÊýÁ¿"
         << ": " << config.maxClinum << endl;
-    out << left << setw(30) << "\tæ¯ä¸ªç»ˆç«¯æœ€å°è™šå±æ•°é‡"
+    out << left << setw(30) << "\tÃ¿¸öÖÕ¶Ë×îÐ¡ÐéÆÁÊýÁ¿"
         << ": " << config.minScrnum << endl;
-    out << left << setw(30) << "\tæ¯ä¸ªç»ˆç«¯æœ€å¤§è™šå±æ•°é‡"
+    out << left << setw(30) << "\tÃ¿¸öÖÕ¶Ë×î´óÐéÆÁÊýÁ¿"
         << ": " << config.maxScrnum << endl;
-    out << left << setw(30) << "\tåˆ é™¤æ—¥å¿—æ–‡ä»¶"
+    out << left << setw(30) << "\tÉ¾³ýÈÕÖ¾ÎÄ¼þ"
         << ": " << config.delLog << endl;
-    out << left << setw(30) << "\tDEBUGå±å¹•æ˜¾ç¤º"
+    out << left << setw(30) << "\tDEBUGÆÁÄ»ÏÔÊ¾"
         << ": " << config.showDbg << endl;
-    out << left << setw(30) << "\tDEBUGè®¾ç½®"
+    out << left << setw(30) << "\tDEBUGÉèÖÃ"
         << ": " << dbgString(config.debug) << endl;
 }
 
 int main(int argc, char **argv)
 {
-    // å‚æ•°å¤„ç†
+    // ²ÎÊý´¦Àí
     if (argc != 3)
     {
         cerr << "Need at least 2 args: [device id] [client number]" << endl;
@@ -201,14 +246,17 @@ int main(int argc, char **argv)
         cerr << "Parameters illegal." << endl;
         exit(1);
     }
+    // ¿ªÆôÈÕÖ¾¼ÇÂ¼
+    Logger console;
+    console.setDevid(argv[1]);
+    console.log("Hello world");
 
-    // è¯»å–é…ç½®æ–‡ä»¶
-    Config config;
-    readConfig(&config);
-    showConfig(cout, config);
-    // èµ‹å€¼å…¨å±€å˜é‡
+    // ¶ÁÈ¡ÅäÖÃÎÄ¼þ
+    readConfig(&g_config);
+    showConfig(cout, g_config);
 
-    // å¼€å¯å­è¿›ç¨‹
+
+    // ¿ªÆô×Ó½ø³Ì
     int status;
     pid_t pid;
 

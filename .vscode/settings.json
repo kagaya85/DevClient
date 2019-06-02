@@ -2,6 +2,12 @@
     "files.associations": {
         "string": "cpp",
         "ostream": "cpp",
-        "iomanip": "cpp"
-    }
+        "iomanip": "cpp",
+        "fstream": "cpp",
+        "iosfwd": "cpp",
+        "iostream": "cpp"
+    },
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/include",
+    ]
 }
