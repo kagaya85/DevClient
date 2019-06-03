@@ -24,4 +24,11 @@ struct Config {
     bool showDbg;   // DEBUG фад╩отй╬
 };
 
+/**
+ * tools
+ */
+std::string binstr(const char *buf, const int buflen);
+std::string confstr(Config &config);
+std::string dbgstr(const unsigned char debug);
+
 #endif // !DEFINES

@@ -9,7 +9,7 @@ RM = -rm -f
 
 all : $(TARGET)
 
-ts : $(SRCDIR)/DevClient.cpp $(SRCDIR)/Logger.cpp
+ts : $(SRCDIR)/Main.cpp $(SRCDIR)/DevClient.cpp $(SRCDIR)/Logger.cpp
 	$(CC) $(CFLAGS) $^ -o $@ -I $(INCLUDE)
 
 .PHONY : clean

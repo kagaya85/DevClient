@@ -62,9 +62,15 @@ void Logger::log(const char *strInfo)
             char temp[1024] = {0};
             strcat(temp, m_logPath);
             strcat(temp, m_logName);
-            m_pFileStream = fopen(temp, "a+");
+            
+            if(g_config.delLog)
+                m_pFileStream = fopen(temp, "w");            
+            else
+                m_pFileStream = fopen(temp, "a+");
+            
             if (!m_pFileStream)
             {
+                std::cerr << "Can't open log file." << std::endl;
                 return;
             }
         }

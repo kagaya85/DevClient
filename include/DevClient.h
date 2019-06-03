@@ -6,10 +6,9 @@
 class DevClient
 {
 private:
-    Config config;
 
 public:
-    DevClient(Config config);
+    DevClient();
     ~DevClient();
 };
 
