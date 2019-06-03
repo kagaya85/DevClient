@@ -43,10 +43,9 @@ std::string Logger::getCurrentTime()
 }
 
 // 设置devid
-void Logger::setDevid(const char* devId)
+void Logger::setDevid(const std::string & devId)
 {
-    if(devId > 0)
-        strcpy(this->m_devId, devId);
+    this->m_devId = devId;
 }
 
 //写文件操作
@@ -78,7 +77,7 @@ void Logger::log(const char *strInfo)
         //进入临界区，文件上锁
         flock(m_fd, LOCK_EX);
         //写日志信息到文件流
-        fprintf(m_pFileStream, "%s [%s] %s\n", getCurrentTime().c_str(), m_devId, strInfo);
+        fprintf(m_pFileStream, "%s [%s] %s\n", getCurrentTime().c_str(), m_devId.c_str(), strInfo);
         fflush(m_pFileStream);
         //离开临界区
         flock(m_fd, LOCK_UN);

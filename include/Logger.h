@@ -14,11 +14,11 @@ private:
 	// 日志的名称
 	const char* m_logName = "ts.log";
     // 设备ID
-    char m_devId[30];
+    std::string m_devId;
 public:
     Logger();
     ~Logger();
-    void setDevid(const char* devId);
+    void setDevid(const std::string & devId);
     std::string getCurrentTime();
     // 日志记录函数
     void log(const char * strInfo);

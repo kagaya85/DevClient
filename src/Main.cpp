@@ -9,6 +9,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <map>
+#include <queue>
 
 #include "Defines.h"
 #include "DevClient.h"
@@ -19,9 +21,17 @@ using namespace std;
 /**
  * global
  */
+// 全局配置结构体
 Config g_config;
-int g_sucNum = 0;   // 成功结束计数
-int g_runNum = 0;   // 正在运行计数
+// 成功结束计数
+int g_sucNum = 0;   
+// 正在运行计数
+int g_runNum = 0;   
+// 建立正在运行进程的进程号与devid的映射关系
+map<int, string> g_devidMap;    
+// 待传送设备号队列
+queue<string> g_devidQueue;
+
 /**
  * child 信号处理函数
  */
@@ -39,6 +49,8 @@ static void child(int signo)
         else if (WIFSIGNALED(status)) // 信号结束
         {
             cout << "child " << pid << " exited abnormal signal number=" << WTERMSIG(status) << endl;
+            // 非正常结束，将pid对应的devid加入设备号队列
+            g_devidQueue.push(g_devidMap[pid]);
             g_runNum--;
         }
         else if (WIFSTOPPED(status)) // 暂停
@@ -312,6 +324,16 @@ string binstr(const char *buf, const int buflen)
     return sout.str();
 }
 
+// 生成连续的devid，放入队列中
+void createDevid(int startId, int clinum)
+{
+    for(int i = 0; i < clinum; i++)
+    {
+        g_devidQueue.push(to_string(startId));
+        startId++;
+    }
+}
+
 /**
  * Ko ↗ Ko → Da ↘ Yo ↗
  */
@@ -337,18 +359,17 @@ int main(int argc, char **argv)
     readConfig(&g_config);
     cout << confstr(g_config);
 
-    // 转变为守护进程
-    daemon(0, g_config.showDbg); // 工作在当前目录，由showDbg决定是否输出到屏幕
+    // 生成devid
+    createDevid(devid, clinum);
 
-    // 开启日志记录
-    Logger console;
-    console.setDevid(argv[1]);
-    console.log("Hello world");
+    // 转变为守护进程
+    // daemon(0, g_config.showDbg); // 工作在当前目录，由showDbg决定是否输出到屏幕
+
+    // 设置信号处理函数
+    signal(SIGCHLD, child);
 
     // 开启子进程
     pid_t cpid;
-
-    signal(SIGCHLD, child);
 
     while (true)
     {
@@ -364,11 +385,17 @@ int main(int argc, char **argv)
             // child process
             else if (cpid == 0)
             {
+                string devid = g_devidQueue.front();
                 // 设置父进程结束后子进程结束
                 prctl(PR_SET_PDEATHSIG, SIGKILL);
                 // DevClient
                 DevClient client;
-
+                            
+                // 开启日志记录
+                Logger console;
+                console.setDevid(devid);
+                console.log("Hello world");
+                
                 // 与服务器通信
                 sleep(5);
 
@@ -381,6 +408,9 @@ int main(int argc, char **argv)
             }
             else
             {
+                string devid = g_devidQueue.front();
+                g_devidQueue.pop(); // 弹出
+                g_devidMap[cpid] = devid;   // 这里插入，相同cpid会覆盖
                 g_runNum++;
             }
         }

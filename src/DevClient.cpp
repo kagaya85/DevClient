@@ -6,7 +6,6 @@
 
 extern Config g_config;
 
-
 /**
  * DevClient
  */
