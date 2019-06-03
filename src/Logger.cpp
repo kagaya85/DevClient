@@ -49,10 +49,14 @@ void Logger::setDevid(const std::string & devId)
 }
 
 //写文件操作
-void Logger::log(const char *strInfo)
+void Logger::log(const std::string & strInfo, int type)
 {
-    if (!strInfo)
+    if (!strInfo.length())
         return;
+        
+    if(g_config.debug | type)
+        std::cout << strInfo << std::endl;
+
     try
     {
         //若文件流没有打开，则重新打开

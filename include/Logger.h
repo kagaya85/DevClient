@@ -21,7 +21,7 @@ public:
     void setDevid(const std::string & devId);
     std::string getCurrentTime();
     // 日志记录函数
-    void log(const char * strInfo);
+    void log(const std::string & strInfo, int type = 0);
 };
 
 #endif
