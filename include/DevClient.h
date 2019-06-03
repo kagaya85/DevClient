@@ -1,14 +1,15 @@
 #ifndef DEVCLIENT
 #define DEVCLIENT
     
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "Defines.h"
 
@@ -18,12 +19,11 @@ class DevClient
 {
 private:
     struct sockaddr_in servaddr;
-    char recvBuff[BUF_SIZE];
-    char sendBuff[BUF_SIZE];
     int sock;
 public:
     DevClient();
     ~DevClient();
+    void SendFile(const string &);
 };
 
 
