@@ -31,6 +31,8 @@ int g_runNum = 0;
 map<int, string> g_devidMap;    
 // 待传送设备号队列
 queue<string> g_devidQueue;
+// 日志记录器
+Logger console;
 
 /**
  * child 信号处理函数
@@ -392,7 +394,6 @@ int main(int argc, char **argv)
                 DevClient client;
                             
                 // 开启日志记录
-                Logger console;
                 console.setDevid(devid);
                 console.log("Hello world");
                 
