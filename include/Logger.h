@@ -1,6 +1,7 @@
 #ifndef LOGGER
 #define LOGGER
 #include <stdio.h>
+#include <string>
 static const int MAX_STR_LEN = 1024;
 
 class Logger
@@ -18,7 +19,7 @@ public:
     Logger();
     ~Logger();
     void setDevid(const char* devId);
-    char* getCurrentTime();
+    std::string getCurrentTime();
     // 日志记录函数
     void log(const char * strInfo);
 };

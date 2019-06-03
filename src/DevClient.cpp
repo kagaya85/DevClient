@@ -29,24 +29,23 @@ DevClient::~DevClient() {}
 /**
  * Tool Function
  */
-string showBinData(const char *buf, const int buflen)
+string binstr(const char *buf, const int buflen)
 {
-    string result;
     string charPart;
-    ostringstream sout(result);
+    ostringstream sout;
     int i;
     
     for (i = 0; i < buflen; i++)
     {
         if (i % 16 == 0) // 行号
-            cout << "  " << setw(4) << setfill('0') << hex << i << ": ";
+            sout << "  "  << setw(4) << setfill('0') << right << hex << i << ": ";
         else if (i % 16 != 0 && i % 8 == 0) // 分隔符
-            cout << " -";
+            sout << " -";
 
         unsigned int c = (unsigned int)buf[i];
 
         // 输出二进制
-        cout << ' ' << setw(2) << setfill('0') << hex << c;
+        sout << ' ' << setw(2) << setfill('0') << hex << c;
 
         // 转换为可视字符
         if (c >= 32 && c <= 126)
@@ -57,8 +56,8 @@ string showBinData(const char *buf, const int buflen)
         // 判断是否到行尾
         if ((i + 1) % 16 == 0)
         {
-            cout << "  " << charPart << endl; // 换行
-            charPart.erase(0);  // 清空
+            sout << "  " << charPart << endl; // 换行
+            charPart.clear();  // 清空
         }
     }
 
@@ -66,15 +65,15 @@ string showBinData(const char *buf, const int buflen)
     if ((i + 1) % 16 != 0)
     {
         for(;i % 16 != 0; i++) {
-            cout << "   ";
-            if(i % 8 == 0)
-                cout << "  ";
+            sout << "   ";
+            if(i % 8 == 0)  // 补齐分隔符的空格
+                sout << "  ";
         }
         
-        cout << "  " << charPart << endl; // 换行
+        sout << "  " << charPart << endl; // 换行
     }
-
-    return result;
+    
+    return sout.str();
 }
 
 string &trim(string &str)
@@ -89,7 +88,8 @@ string &trim(string &str)
     return str;
 }
 
-inline unsigned char data2bin(const char *data)
+// 将字符串转二进制数
+inline unsigned char str2bin(const char *data)
 {
     unsigned char c = '\0';
     for (int i = 0; i < 8; i++)
@@ -202,7 +202,7 @@ void readConfig(Config *config)
             {
                 if (only_once[8])
                     continue;
-                config->debug = data2bin(value.c_str());
+                config->debug = str2bin(value.c_str());
                 only_once[8] = 1;
             }
             else if (item == "DEBUG屏幕显示")
@@ -260,29 +260,33 @@ string dbgString(const unsigned char debug)
     return result;
 }
 
-void showConfig(ostream &out, Config &config)
+string confstr(Config &config)
 {
-    out << left << "当前配置如下:" << endl;
-    out << left << setw(30) << "服务器IP地址"
+    int width = 25;
+    ostringstream ss;
+    ss << left << "当前配置如下:" << endl;
+    ss << left << setw(width) << "\t服务器IP地址"
         << ": " << config.serverIp << endl;
-    out << left << setw(30) << "端口号"
+    ss << left << setw(width) << "\t端口号"
         << ": " << config.port << endl;
-    out << left << setw(30) << "进程接受成功后退出"
+    ss << left << setw(width) << "\t进程接受成功后退出"
         << ": " << config.sucExt << endl;
-    out << left << setw(30) << "最小配置终端数量"
+    ss << left << setw(width) << "\t最小配置终端数量"
         << ": " << config.minClinum << endl;
-    out << left << setw(30) << "最大配置终端数量"
+    ss << left << setw(width) << "\t最大配置终端数量"
         << ": " << config.maxClinum << endl;
-    out << left << setw(30) << "每个终端最小虚屏数量"
+    ss << left << setw(width) << "\t每个终端最小虚屏数量"
         << ": " << config.minScrnum << endl;
-    out << left << setw(30) << "每个终端最大虚屏数量"
+    ss << left << setw(width) << "\t每个终端最大虚屏数量"
         << ": " << config.maxScrnum << endl;
-    out << left << setw(30) << "删除日志文件"
+    ss << left << setw(width) << "\t删除日志文件"
         << ": " << config.delLog << endl;
-    out << left << setw(30) << "DEBUG屏幕显示"
+    ss << left << setw(width) << "\tDEBUG屏幕显示"
         << ": " << config.showDbg << endl;
-    out << left << setw(30) << "DEBUG设置"
+    ss << left << setw(width) << "\tDEBUG设置"
         << ": " << dbgString(config.debug) << endl;
+    
+    return ss.str();
 }
 
 /**
@@ -312,9 +316,9 @@ int main(int argc, char **argv)
 
     // 读取配置文件
     readConfig(&g_config);
-    showConfig(cout, g_config);
+    cout << confstr(g_config);
 
-    cout << showBinData("12345678901234567890", 20);
+    cout << binstr("12345678901234567890", 20);
 
     // 开启子进程
     int status;

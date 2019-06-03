@@ -29,7 +29,7 @@ Logger::~Logger()
 }
 
 //获取系统当前时间
-char *Logger::getCurrentTime()
+std::string Logger::getCurrentTime()
 {
     time_t curTime;
     struct tm *pTimeInfo = NULL;
@@ -38,7 +38,7 @@ char *Logger::getCurrentTime()
     char temp[MAX_STR_LEN] = {0};
     // sprintf(temp, "%04d-%02d-%02d %02d:%02d:%02d", pTimeInfo->tm_year + 1990, pTimeInfo->tm_mon + 1, pTimeInfo->tm_mday,pTimeInfo->tm_hour, pTimeInfo->tm_min, pTimeInfo->tm_sec);
     sprintf(temp, "%02d:%02d:%02d", pTimeInfo->tm_hour, pTimeInfo->tm_min, pTimeInfo->tm_sec);
-    char *pTemp = temp;
+    std::string pTemp = temp;
     return pTemp;
 }
 
@@ -72,7 +72,7 @@ void Logger::log(const char *strInfo)
         //进入临界区，文件上锁
         flock(m_fd, LOCK_EX);
         //写日志信息到文件流
-        fprintf(m_pFileStream, "%s [%s] %s\n", getCurrentTime(), m_devId, strInfo);
+        fprintf(m_pFileStream, "%s [%s] %s\n", getCurrentTime().c_str(), m_devId, strInfo);
         fflush(m_pFileStream);
         //离开临界区
         flock(m_fd, LOCK_UN);
