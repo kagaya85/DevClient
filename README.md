@@ -16,7 +16,7 @@ Branch master 主分支
 
 施工中。。。
 
-## schedule
+## Schedule
 
 - [x] 读配置文件
 - [x] 日志记录
