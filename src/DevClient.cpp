@@ -14,12 +14,36 @@
 
 using namespace std;
 
-// 全局配置变量
+/**
+ * global
+ */
 Config g_config;
 
+/**
+ * DevClient
+ */
 DevClient::DevClient(Config config) {}
 
 DevClient::~DevClient() {}
+
+/**
+ * Tool Function
+ */
+string bin2Str(const char* buf, const int buflen)
+{
+    string result;
+    string charPart;
+    const char* p = buf;
+    ostringstream sout(result);
+
+
+    for(int i = 0; i < buflen; i++)
+    {
+
+    }
+
+    return result;
+}
 
 string &trim(string &str)
 {
@@ -229,6 +253,9 @@ void showConfig(ostream &out, Config &config)
         << ": " << dbgString(config.debug) << endl;
 }
 
+/**
+ * Ko ↗ Ko → Da ↘ Yo ↗
+ */
 int main(int argc, char **argv)
 {
     // 参数处理
