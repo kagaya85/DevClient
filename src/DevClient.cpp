@@ -29,17 +29,49 @@ DevClient::~DevClient() {}
 /**
  * Tool Function
  */
-string bin2Str(const char* buf, const int buflen)
+string showBinData(const char *buf, const int buflen)
 {
     string result;
     string charPart;
-    const char* p = buf;
     ostringstream sout(result);
-
-
-    for(int i = 0; i < buflen; i++)
+    int i;
+    
+    for (i = 0; i < buflen; i++)
     {
+        if (i % 16 == 0) // 行号
+            cout << "  " << setw(4) << setfill('0') << hex << i << ": ";
+        else if (i % 16 != 0 && i % 8 == 0) // 分隔符
+            cout << " -";
 
+        unsigned int c = (unsigned int)buf[i];
+
+        // 输出二进制
+        cout << ' ' << setw(2) << setfill('0') << hex << c;
+
+        // 转换为可视字符
+        if (c >= 32 && c <= 126)
+            charPart.push_back(char(c));
+        else
+            charPart.push_back('.');
+
+        // 判断是否到行尾
+        if ((i + 1) % 16 == 0)
+        {
+            cout << "  " << charPart << endl; // 换行
+            charPart.erase(0);  // 清空
+        }
+    }
+
+    // 如果最后一行不完整，补齐输出
+    if ((i + 1) % 16 != 0)
+    {
+        for(;i % 16 != 0; i++) {
+            cout << "   ";
+            if(i % 8 == 0)
+                cout << "  ";
+        }
+        
+        cout << "  " << charPart << endl; // 换行
     }
 
     return result;
@@ -231,25 +263,25 @@ string dbgString(const unsigned char debug)
 void showConfig(ostream &out, Config &config)
 {
     out << left << "当前配置如下:" << endl;
-    out << left << setw(30) << "\t服务器IP地址"
+    out << left << setw(30) << "服务器IP地址"
         << ": " << config.serverIp << endl;
-    out << left << setw(30) << "\t端口号"
+    out << left << setw(30) << "端口号"
         << ": " << config.port << endl;
-    out << left << setw(30) << "\t进程接受成功后退出"
+    out << left << setw(30) << "进程接受成功后退出"
         << ": " << config.sucExt << endl;
-    out << left << setw(30) << "\t最小配置终端数量"
+    out << left << setw(30) << "最小配置终端数量"
         << ": " << config.minClinum << endl;
-    out << left << setw(30) << "\t最大配置终端数量"
+    out << left << setw(30) << "最大配置终端数量"
         << ": " << config.maxClinum << endl;
-    out << left << setw(30) << "\t每个终端最小虚屏数量"
+    out << left << setw(30) << "每个终端最小虚屏数量"
         << ": " << config.minScrnum << endl;
-    out << left << setw(30) << "\t每个终端最大虚屏数量"
+    out << left << setw(30) << "每个终端最大虚屏数量"
         << ": " << config.maxScrnum << endl;
-    out << left << setw(30) << "\t删除日志文件"
+    out << left << setw(30) << "删除日志文件"
         << ": " << config.delLog << endl;
-    out << left << setw(30) << "\tDEBUG屏幕显示"
+    out << left << setw(30) << "DEBUG屏幕显示"
         << ": " << config.showDbg << endl;
-    out << left << setw(30) << "\tDEBUG设置"
+    out << left << setw(30) << "DEBUG设置"
         << ": " << dbgString(config.debug) << endl;
 }
 
@@ -282,6 +314,7 @@ int main(int argc, char **argv)
     readConfig(&g_config);
     showConfig(cout, g_config);
 
+    cout << showBinData("12345678901234567890", 20);
 
     // 开启子进程
     int status;
