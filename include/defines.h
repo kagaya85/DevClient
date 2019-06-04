@@ -29,7 +29,7 @@ struct Head {
     char main;
     char sub;
     short totlen;
-    short padding;
+    short ethport;
     short datalen;
 };
 
