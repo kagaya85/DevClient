@@ -24,6 +24,15 @@ struct Config {
     bool showDbg;   // DEBUG 屏幕显示
 };
 
+// 报文投结构体
+struct Head {
+    char main;
+    char sub;
+    short totlen;
+    short padding;
+    short datalen;
+};
+
 /**
  * tools
  */
