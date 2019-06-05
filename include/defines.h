@@ -26,8 +26,8 @@ struct Config {
 
 // 报文投结构体
 struct Head {
-    char main;
-    char sub;
+    char origin;
+    char type;
     short totlen;
     short ethport;
     short datalen;

@@ -14,6 +14,8 @@
 #include "Defines.h"
 
 #define BUF_SIZE 4096
+#define SERVER 0x11
+#define CLIENT 0x91
 
 class DevClient
 {

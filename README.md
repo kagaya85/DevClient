@@ -2,11 +2,7 @@
 
 网络编程实战——终端数据传输（客户端）
 
-<<<<<<< HEAD
 Branch master 主分支
-=======
-Branch Development 开发分支
->>>>>>> development
 
 ## Target
 
