@@ -43,10 +43,18 @@ static void child(int signo)
     int status;
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
     {
-        if (WIFEXITED(status)) // 正常结束
+        if (WIFEXITED(status)) // exit结束
         {
             cout << "child " << pid << " exited normal exit status=" << WEXITSTATUS(status) << endl;
-            g_sucNum++;
+            if(WEXITSTATUS(status) == 0)
+                g_sucNum++;
+            else
+            {
+                // 非正常结束，将pid对应的devid加入设备号队列
+                g_devidQueue.push(g_devidMap[pid]);
+                g_runNum--;
+            }
+            
         }
         else if (WIFSIGNALED(status)) // 信号结束
         {
