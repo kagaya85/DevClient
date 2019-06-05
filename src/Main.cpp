@@ -21,21 +21,21 @@ using namespace std;
 /**
  * global
  */
-// å…¨å±€é…ç½®ç»“æ„ä½“
+// È«¾ÖÅäÖÃ½á¹¹Ìå
 Config g_config;
-// æˆåŠŸç»“æŸè®¡æ•°
-int g_sucNum = 0;   
-// æ­£åœ¨è¿è¡Œè®¡æ•°
-int g_runNum = 0;   
-// å»ºç«‹æ­£åœ¨è¿è¡Œè¿›ç¨‹çš„è¿›ç¨‹å·ä¸devidçš„æ˜ å°„å…³ç³»
-map<int, string> g_devidMap;    
-// å¾…ä¼ é€è®¾å¤‡å·é˜Ÿåˆ—
+// ³É¹¦½áÊø¼ÆÊı
+int g_sucNum = 0;
+// ÕıÔÚÔËĞĞ¼ÆÊı
+int g_runNum = 0;
+// ½¨Á¢ÕıÔÚÔËĞĞ½ø³ÌµÄ½ø³ÌºÅÓëdevidµÄÓ³Éä¹ØÏµ
+map<int, string> g_devidMap;
+// ´ı´«ËÍÉè±¸ºÅ¶ÓÁĞ
 queue<string> g_devidQueue;
-// æ—¥å¿—è®°å½•å™¨
+// ÈÕÖ¾¼ÇÂ¼Æ÷
 Logger console;
 
 /**
- * child ä¿¡å·å¤„ç†å‡½æ•°
+ * child ĞÅºÅ´¦Àíº¯Êı
  */
 static void child(int signo)
 {
@@ -43,27 +43,27 @@ static void child(int signo)
     int status;
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
     {
-        if (WIFEXITED(status)) // exitç»“æŸ
+        if (WIFEXITED(status)) // exit½áÊø
         {
             cout << "child " << pid << " exited normal exit status=" << WEXITSTATUS(status) << endl;
             if(WEXITSTATUS(status) == 0)
                 g_sucNum++;
             else
             {
-                // éæ­£å¸¸ç»“æŸï¼Œå°†pidå¯¹åº”çš„devidåŠ å…¥è®¾å¤‡å·é˜Ÿåˆ—
+                // ·ÇÕı³£½áÊø£¬½«pid¶ÔÓ¦µÄdevid¼ÓÈëÉè±¸ºÅ¶ÓÁĞ
                 g_devidQueue.push(g_devidMap[pid]);
                 g_runNum--;
             }
             
         }
-        else if (WIFSIGNALED(status)) // ä¿¡å·ç»“æŸ
+        else if (WIFSIGNALED(status)) // ĞÅºÅ½áÊø
         {
             cout << "child " << pid << " exited abnormal signal number=" << WTERMSIG(status) << endl;
-            // éæ­£å¸¸ç»“æŸï¼Œå°†pidå¯¹åº”çš„devidåŠ å…¥è®¾å¤‡å·é˜Ÿåˆ—
+            // ·ÇÕı³£½áÊø£¬½«pid¶ÔÓ¦µÄdevid¼ÓÈëÉè±¸ºÅ¶ÓÁĞ
             g_devidQueue.push(g_devidMap[pid]);
             g_runNum--;
         }
-        else if (WIFSTOPPED(status)) // æš‚åœ
+        else if (WIFSTOPPED(status)) // ÔİÍ£
             cout << "child " << pid << " stoped signal number=%d\n"
                  << WSTOPSIG(status) << endl;
     }
@@ -84,7 +84,7 @@ string &trim(string &str)
     return str;
 }
 
-// å°†å­—ç¬¦ä¸²è½¬äºŒè¿›åˆ¶æ•°
+// ½«×Ö·û´®×ª¶ş½øÖÆÊı
 inline unsigned char str2bin(const char *data)
 {
     unsigned char c = '\0';
@@ -105,14 +105,14 @@ void readConfig(Config *config)
 
     config->serverIp = "192.168.1.246";
     config->port = 40275;
-    config->sucExt = 1;     // è¿›ç¨‹æ¥å—æˆåŠŸåé€€å‡º 1ï¼šé€€å‡º 0ï¼šé—´éš”è‹¥å¹²æ—¶é—´å†æ¬¡å‘é€
-    config->minClinum = 5;  // æœ€å°é…ç½®ç»ˆç«¯æ•°é‡
-    config->maxClinum = 28; // æœ€å¤§é…ç½®ç»ˆç«¯æ•°é‡
-    config->minScrnum = 3;  // æ¯ä¸ªç»ˆç«¯æœ€å°è™šå±æ•°é‡
-    config->maxScrnum = 10; // æ¯ä¸ªç»ˆç«¯æœ€å¤§è™šå±æ•°é‡
-    config->delLog = 0;     // åˆ é™¤æ—¥å¿—æ–‡ä»¶
-    config->debug = 0;      // DEBUG è®¾ç½®
-    config->showDbg = 0;    // DEBUG å±å¹•æ˜¾ç¤º
+    config->sucExt = 1;     // ½ø³Ì½ÓÊÜ³É¹¦ºóÍË³ö 1£ºÍË³ö 0£º¼ä¸ôÈô¸ÉÊ±¼äÔÙ´Î·¢ËÍ
+    config->minClinum = 5;  // ×îĞ¡ÅäÖÃÖÕ¶ËÊıÁ¿
+    config->maxClinum = 28; // ×î´óÅäÖÃÖÕ¶ËÊıÁ¿
+    config->minScrnum = 3;  // Ã¿¸öÖÕ¶Ë×îĞ¡ĞéÆÁÊıÁ¿
+    config->maxScrnum = 10; // Ã¿¸öÖÕ¶Ë×î´óĞéÆÁÊıÁ¿
+    config->delLog = 0;     // É¾³ıÈÕÖ¾ÎÄ¼ş
+    config->debug = 0;      // DEBUG ÉèÖÃ
+    config->showDbg = 0;    // DEBUG ÆÁÄ»ÏÔÊ¾
 
     while (!fin.eof())
     {
@@ -126,28 +126,28 @@ void readConfig(Config *config)
         if (tmp - '#')
         {
             sin >> item >> value;
-            if (item == "æœåŠ¡å™¨IPåœ°å€")
+            if (item == "·şÎñÆ÷IPµØÖ·")
             {
                 if (only_once[0])
                     continue;
                 config->serverIp = value;
                 only_once[0] = 1;
             }
-            else if (item == "ç«¯å£å·")
+            else if (item == "¶Ë¿ÚºÅ")
             {
                 if (only_once[1])
                     continue;
                 config->port = stoi(value);
                 only_once[1] = 1;
             }
-            else if (item == "è¿›ç¨‹æ¥æ”¶æˆåŠŸåé€€å‡º")
+            else if (item == "½ø³Ì½ÓÊÕ³É¹¦ºóÍË³ö")
             {
                 if (only_once[2])
                     continue;
                 config->sucExt = value == "1" ? true : false;
                 only_once[2] = 1;
             }
-            else if (item == "æœ€å°é…ç½®ç»ˆç«¯æ•°é‡")
+            else if (item == "×îĞ¡ÅäÖÃÖÕ¶ËÊıÁ¿")
             {
                 if (only_once[3])
                     continue;
@@ -157,7 +157,7 @@ void readConfig(Config *config)
                 config->minClinum = v;
                 only_once[3] = 1;
             }
-            else if (item == "æœ€å¤§é…ç½®ç»ˆç«¯æ•°é‡")
+            else if (item == "×î´óÅäÖÃÖÕ¶ËÊıÁ¿")
             {
                 if (only_once[4])
                     continue;
@@ -167,7 +167,7 @@ void readConfig(Config *config)
                 config->maxClinum = v;
                 only_once[4] = 1;
             }
-            else if (item == "æ¯ä¸ªç»ˆç«¯æœ€å°è™šå±æ•°é‡")
+            else if (item == "Ã¿¸öÖÕ¶Ë×îĞ¡ĞéÆÁÊıÁ¿")
             {
                 if (only_once[5])
                     continue;
@@ -177,7 +177,7 @@ void readConfig(Config *config)
                 config->minScrnum = v;
                 only_once[5] = 1;
             }
-            else if (item == "æ¯ä¸ªç»ˆç«¯æœ€å¤§è™šå±æ•°é‡")
+            else if (item == "Ã¿¸öÖÕ¶Ë×î´óĞéÆÁÊıÁ¿")
             {
                 if (only_once[6])
                     continue;
@@ -187,21 +187,21 @@ void readConfig(Config *config)
                 config->maxScrnum = v;
                 only_once[6] = 1;
             }
-            else if (item == "åˆ é™¤æ—¥å¿—æ–‡ä»¶")
+            else if (item == "É¾³ıÈÕÖ¾ÎÄ¼ş")
             {
                 if (only_once[7])
                     continue;
                 config->delLog = value == "1" ? true : false;
                 only_once[7] = 1;
             }
-            else if (item == "DEBUGè®¾ç½®")
+            else if (item == "DEBUGÉèÖÃ")
             {
                 if (only_once[8])
                     continue;
                 config->debug = str2bin(value.c_str());
                 only_once[8] = 1;
             }
-            else if (item == "DEBUGå±å¹•æ˜¾ç¤º")
+            else if (item == "DEBUGÆÁÄ»ÏÔÊ¾")
             {
                 if (only_once[9])
                     continue;
@@ -260,32 +260,32 @@ string confstr(Config &config)
 {
     int width = 25;
     ostringstream ss;
-    ss << left << "å½“å‰é…ç½®å¦‚ä¸‹:" << endl;
-    ss << left << setw(width) << "\tæœåŠ¡å™¨IPåœ°å€"
+    ss << left << "µ±Ç°ÅäÖÃÈçÏÂ:" << endl;
+    ss << left << setw(width) << "\t·şÎñÆ÷IPµØÖ·"
        << ": " << config.serverIp << endl;
-    ss << left << setw(width) << "\tç«¯å£å·"
+    ss << left << setw(width) << "\t¶Ë¿ÚºÅ"
        << ": " << config.port << endl;
-    ss << left << setw(width) << "\tè¿›ç¨‹æ¥å—æˆåŠŸåé€€å‡º"
+    ss << left << setw(width) << "\t½ø³Ì½ÓÊÜ³É¹¦ºóÍË³ö"
        << ": " << config.sucExt << endl;
-    ss << left << setw(width) << "\tæœ€å°é…ç½®ç»ˆç«¯æ•°é‡"
+    ss << left << setw(width) << "\t×îĞ¡ÅäÖÃÖÕ¶ËÊıÁ¿"
        << ": " << config.minClinum << endl;
-    ss << left << setw(width) << "\tæœ€å¤§é…ç½®ç»ˆç«¯æ•°é‡"
+    ss << left << setw(width) << "\t×î´óÅäÖÃÖÕ¶ËÊıÁ¿"
        << ": " << config.maxClinum << endl;
-    ss << left << setw(width) << "\tæ¯ä¸ªç»ˆç«¯æœ€å°è™šå±æ•°é‡"
+    ss << left << setw(width) << "\tÃ¿¸öÖÕ¶Ë×îĞ¡ĞéÆÁÊıÁ¿"
        << ": " << config.minScrnum << endl;
-    ss << left << setw(width) << "\tæ¯ä¸ªç»ˆç«¯æœ€å¤§è™šå±æ•°é‡"
+    ss << left << setw(width) << "\tÃ¿¸öÖÕ¶Ë×î´óĞéÆÁÊıÁ¿"
        << ": " << config.maxScrnum << endl;
-    ss << left << setw(width) << "\tåˆ é™¤æ—¥å¿—æ–‡ä»¶"
+    ss << left << setw(width) << "\tÉ¾³ıÈÕÖ¾ÎÄ¼ş"
        << ": " << config.delLog << endl;
-    ss << left << setw(width) << "\tDEBUGå±å¹•æ˜¾ç¤º"
+    ss << left << setw(width) << "\tDEBUGÆÁÄ»ÏÔÊ¾"
        << ": " << config.showDbg << endl;
-    ss << left << setw(width) << "\tDEBUGè®¾ç½®"
+    ss << left << setw(width) << "\tDEBUGÉèÖÃ"
        << ": " << dbgstr(config.debug) << endl;
 
     return ss.str();
 }
 
-//å°†bufå†…çš„æ•°æ®æ ¼å¼åŒ–åè¿”å›string
+//½«bufÄÚµÄÊı¾İ¸ñÊ½»¯ºó·µ»Østring
 string binstr(const char *buf, const int buflen)
 {
     string charPart;
@@ -294,47 +294,47 @@ string binstr(const char *buf, const int buflen)
 
     for (i = 0; i < buflen; i++)
     {
-        if (i % 16 == 0) // è¡Œå·
+        if (i % 16 == 0) // ĞĞºÅ
             sout << "  " << setw(4) << setfill('0') << right << hex << i << ": ";
-        else if (i % 16 != 0 && i % 8 == 0) // åˆ†éš”ç¬¦
+        else if (i % 16 != 0 && i % 8 == 0) // ·Ö¸ô·û
             sout << " -";
 
         unsigned int c = (unsigned int)buf[i];
 
-        // è¾“å‡ºäºŒè¿›åˆ¶
+        // Êä³ö¶ş½øÖÆ
         sout << ' ' << setw(2) << setfill('0') << hex << c;
 
-        // è½¬æ¢ä¸ºå¯è§†å­—ç¬¦
+        // ×ª»»Îª¿ÉÊÓ×Ö·û
         if (c >= 32 && c <= 126)
             charPart.push_back(char(c));
         else
             charPart.push_back('.');
 
-        // åˆ¤æ–­æ˜¯å¦åˆ°è¡Œå°¾
+        // ÅĞ¶ÏÊÇ·ñµ½ĞĞÎ²
         if ((i + 1) % 16 == 0)
         {
-            sout << "  " << charPart << endl; // æ¢è¡Œ
-            charPart.clear();                 // æ¸…ç©º
+            sout << "  " << charPart << endl; // »»ĞĞ
+            charPart.clear();                 // Çå¿Õ
         }
     }
 
-    // å¦‚æœæœ€åä¸€è¡Œä¸å®Œæ•´ï¼Œè¡¥é½è¾“å‡º
+    // Èç¹û×îºóÒ»ĞĞ²»ÍêÕû£¬²¹ÆëÊä³ö
     if ((i + 1) % 16 != 0)
     {
         for (; i % 16 != 0; i++)
         {
             sout << "   ";
-            if (i % 8 == 0) // è¡¥é½åˆ†éš”ç¬¦çš„ç©ºæ ¼
+            if (i % 8 == 0) // ²¹Æë·Ö¸ô·ûµÄ¿Õ¸ñ
                 sout << "  ";
         }
 
-        sout << "  " << charPart << endl; // æ¢è¡Œ
+        sout << "  " << charPart << endl; // »»ĞĞ
     }
 
     return sout.str();
 }
 
-// ç”Ÿæˆè¿ç»­çš„devidï¼Œæ”¾å…¥é˜Ÿåˆ—ä¸­
+// Éú³ÉÁ¬ĞøµÄdevid£¬·ÅÈë¶ÓÁĞÖĞ
 void createDevid(int startId, int clinum)
 {
     for(int i = 0; i < clinum; i++)
@@ -345,11 +345,11 @@ void createDevid(int startId, int clinum)
 }
 
 /**
- * Ko â†— Ko â†’ Da â†˜ Yo â†—
+ * Ko ¨J Ko ¡ú Da ¨K Yo ¨J
  */
 int main(int argc, char **argv)
 {
-    // å‚æ•°å¤„ç†
+    // ²ÎÊı´¦Àí
     if (argc != 3)
     {
         cerr << "Need 2 parameters at least : [device id] [client number]" << endl;
@@ -365,20 +365,20 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    // è¯»å–é…ç½®æ–‡ä»¶
+    // ¶ÁÈ¡ÅäÖÃÎÄ¼ş
     readConfig(&g_config);
     cout << confstr(g_config);
 
-    // ç”Ÿæˆdevid
+    // Éú³Édevid
     createDevid(devid, clinum);
 
-    // è½¬å˜ä¸ºå®ˆæŠ¤è¿›ç¨‹
-    // daemon(0, g_config.showDbg); // å·¥ä½œåœ¨å½“å‰ç›®å½•ï¼Œç”±showDbgå†³å®šæ˜¯å¦è¾“å‡ºåˆ°å±å¹•
+    // ×ª±äÎªÊØ»¤½ø³Ì
+    // daemon(0, g_config.showDbg); // ¹¤×÷ÔÚµ±Ç°Ä¿Â¼£¬ÓÉshowDbg¾ö¶¨ÊÇ·ñÊä³öµ½ÆÁÄ»
 
-    // è®¾ç½®ä¿¡å·å¤„ç†å‡½æ•°
+    // ÉèÖÃĞÅºÅ´¦Àíº¯Êı
     signal(SIGCHLD, child);
 
-    // å¼€å¯å­è¿›ç¨‹
+    // ¿ªÆô×Ó½ø³Ì
     pid_t cpid;
 
     while (true)
@@ -388,48 +388,48 @@ int main(int argc, char **argv)
             cpid = fork();
             if (cpid < 0)
             {
-                // åˆ†è£‚å¤±è´¥
-                sleep(1); // 1s åé‡è¯•
+                // ·ÖÁÑÊ§°Ü
+                sleep(1); // 1s ºóÖØÊÔ
                 continue;
             }
             // child process
             else if (cpid == 0)
             {
                 string devid = g_devidQueue.front();
-                // è®¾ç½®çˆ¶è¿›ç¨‹ç»“æŸåå­è¿›ç¨‹ç»“æŸ
+                // ÉèÖÃ¸¸½ø³Ì½áÊøºó×Ó½ø³Ì½áÊø
                 prctl(PR_SET_PDEATHSIG, SIGKILL);
                 // DevClient
                 DevClient client;
                             
-                // å¼€å¯æ—¥å¿—è®°å½•
+                // ¿ªÆôÈÕÖ¾¼ÇÂ¼
                 console.setDevid(devid);
                 console.log("Hello world");
                 
-                // ä¸æœåŠ¡å™¨é€šä¿¡
+                // Óë·şÎñÆ÷Í¨ĞÅ
                 sleep(5);
 
-                if (g_config.sucExt) // æ¥å—æˆåŠŸåé€€å‡º
+                if (g_config.sucExt) // ½ÓÊÜ³É¹¦ºóÍË³ö
                     exit(0);
                 else
                 {
-                    // é—´éš”ä¸€æ®µæ—¶é—´åé‡å¤å‘é€
+                    // ¼ä¸ôÒ»¶ÎÊ±¼äºóÖØ¸´·¢ËÍ
                 }
             }
             else
             {
                 string devid = g_devidQueue.front();
-                g_devidQueue.pop(); // å¼¹å‡º
-                g_devidMap[cpid] = devid;   // è¿™é‡Œæ’å…¥ï¼Œç›¸åŒcpidä¼šè¦†ç›–
+                g_devidQueue.pop(); // µ¯³ö
+                g_devidMap[cpid] = devid;   // ÕâÀï²åÈë£¬ÏàÍ¬cpid»á¸²¸Ç
                 g_runNum++;
             }
         }
         // parent process
         else
         {
-            cout << "å·²åˆ†è£‚" << g_runNum << "ä¸ªå­è¿›ç¨‹" << endl;
-            // å…¥ç¡ç­‰å¾…å­è¿›ç¨‹ç»“æŸ
+            cout << "ÒÑ·ÖÁÑ" << g_runNum << "¸ö×Ó½ø³Ì" << endl;
+            // ÈëË¯µÈ´ı×Ó½ø³Ì½áÊø
             pause();
-            if(g_sucNum == clinum)  // å…¨éƒ¨å‘é€æˆåŠŸï¼Œçˆ¶è¿›ç¨‹é€€å‡º
+            if(g_sucNum == clinum)  // È«²¿·¢ËÍ³É¹¦£¬¸¸½ø³ÌÍË³ö
                 break;
         }
     }

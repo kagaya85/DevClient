@@ -17,6 +17,28 @@
 #define SERVER 0x11
 #define CLIENT 0x91
 
+// 服务器事件
+#define SERVER_AUTH_REQ 0x01
+
+// 客户端事件
+#define CLIENT_VER_REQ 0x00
+#define CLIENT_DEV_INFO 0x01
+
+// 请求信息事件
+#define SYS_INFO 0x02
+#define CONF_INFO 0x03
+#define PROC_INFO 0x04
+#define ETH_INFO 0x05
+#define USB_INFO 0x07
+#define PRT_INFO 0x08
+#define TER_INFO 0x09
+#define YATER_INFO 0x0a
+#define IPTER_INFO 0x0b
+#define FILE_INFO 0x0c
+#define QUE_INFO 0x0d
+
+#define ACK 0xff
+
 class DevClient
 {
 private:

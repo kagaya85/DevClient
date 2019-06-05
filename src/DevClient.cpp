@@ -15,19 +15,19 @@ using namespace std;
  */
 DevClient::DevClient()
 {
-    // åˆå§‹åŒ– socket
+    // ³õÊ¼»¯ socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    { // å‚æ•°æœ€åä¸€ä¸ª0ä»£è¡¨è‡ªåŠ¨é€‰æ‹©åè®®
+    { // ²ÎÊı×îºóÒ»¸ö0´ú±í×Ô¶¯Ñ¡ÔñĞ­Òé
         ostringstream ss;
         ss << "create socket error: " << strerror(errno) << " (errno: " << errno << ")";
         console.log(ss.str(), DBG_ERR);
         exit(-1);
     }
 
-    // servaddråˆå§‹åŒ–
+    // servaddr³õÊ¼»¯
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    // è®¾ç½®ipåœ°å€
+    // ÉèÖÃipµØÖ·
     if (inet_pton(AF_INET, g_config.serverIp.c_str(), &servaddr.sin_addr) <= 0)
     {
         ostringstream ss;
@@ -36,10 +36,10 @@ DevClient::DevClient()
         exit(-1);
     }
 
-    //è®¾ç½®çš„ç«¯å£ä¸ºè¾“å…¥å‚æ•°
+    //ÉèÖÃµÄ¶Ë¿ÚÎªÊäÈë²ÎÊı
     servaddr.sin_port = htons(g_config.port);
 
-    // è¯·æ±‚è¿æ¥
+    // ÇëÇóÁ¬½Ó
     // if(connect(sock, (struct sockaddr*)&servaddr, sizeof(servaddr)) < 0) {
     //     ostringstream ss;
     //     ss << "create socket error: "<< strerror(errno) <<" (errno: " << errno << ")";
@@ -47,18 +47,43 @@ DevClient::DevClient()
     //     exit(-1);
     // }
 
-    // é˜»å¡è¯»
+    // ×èÈû¶Á
     Head head;
     if (read(sock, &head, sizeof(Head)))
     {
-        if(head.origin != SERVER)
+        // ÈôÀ´Ô´²»ÊÇ·şÎñÆ÷£¬ÌØÊâ´¦Àí
+        if (head.origin != SERVER)
         {
-
         }
 
-        switch(head.type) 
+        switch (head.type)
         {
-
+        case SERVER_AUTH_REQ:
+            break;
+        case SYS_INFO:
+            break;
+        case CONF_INFO:
+            break;
+        case PROC_INFO:
+            break;
+        case ETH_INFO:
+            break;
+        case USB_INFO:
+            break;
+        case PRT_INFO:
+            break;
+        case TER_INFO:
+            break;
+        case YATER_INFO:
+            break;
+        case IPTER_INFO:
+            break;
+        case FILE_INFO:
+            break;
+        case QUE_INFO:
+            break;
+        case ACK:
+            break;
         }
     }
 }
