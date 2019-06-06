@@ -39,6 +39,7 @@
 
 #define ACK 0xff
 
+
 class DevClient
 {
 private:
@@ -47,7 +48,10 @@ private:
 public:
     DevClient();
     ~DevClient();
-    void SendFile(const string &);
+    int Connect();
+    int WaitForMsg(Head &head, u_char* &databuf, int &buflen);
+    int MsgHandler(Head head, u_char* databuf, int buflen);
+    void ReadFileToBuf(const std::string &, u_char* &databuf);
 };
 
 

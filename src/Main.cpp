@@ -85,9 +85,9 @@ string &trim(string &str)
 }
 
 // 将字符串转二进制数
-inline unsigned char str2bin(const char *data)
+inline u_char str2bin(const char *data)
 {
-    unsigned char c = '\0';
+    u_char c = '\0';
     for (int i = 0; i < 8; i++)
     {
         if (data[i] == '1')
@@ -214,7 +214,7 @@ void readConfig(Config *config)
     return;
 }
 
-string dbgstr(const unsigned char debug)
+string dbgstr(const u_char debug)
 {
     string result;
 
@@ -299,7 +299,7 @@ string binstr(const char *buf, const int buflen)
         else if (i % 16 != 0 && i % 8 == 0) // 分隔符
             sout << " -";
 
-        unsigned int c = (unsigned int)buf[i];
+        u_int c = (u_int)buf[i];
 
         // 输出二进制
         sout << ' ' << setw(2) << setfill('0') << hex << c;
