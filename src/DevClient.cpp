@@ -106,7 +106,9 @@ int DevClient::MsgHandler(Head head, u_char* databuf, int buflen)
     // 若来源不是服务器，特殊处理
     if (head.origin != SERVER)
     {
+
     }
+
     switch (head.type)
     {
     case SERVER_AUTH_REQ:
@@ -138,16 +140,39 @@ int DevClient::MsgHandler(Head head, u_char* databuf, int buflen)
     }
 }
 
-void DevClient::ReadFileToBuf(const std::string &filename, u_char* &databuf)
+int DevClient::ReadFileToBuf(const std::string &filename, u_char* &databuf, int &buflen)
 {
     char sendBuff[BUF_SIZE];
-    int wNum = 0;
 
-    if (write(sock, sendBuff, wNum) <= 0)
+    FILE *fp = fopen(filename.c_str(), "rb");  
+    if (fp == NULL)
     {
         std::ostringstream ss;
-        ss << "send message error, filename: " << filename;
+        ss << "open file error [filename: " << filename << " ]";
         console.log(ss.str(), DBG_ERR);
         exit(0);
     }
+
+    // 获取文件位置
+    rewind(fp);
+    long filesize = ftell(fp) + 1;
+
+    if(databuf)
+        delete databuf;
+    
+    databuf = new(std::nothrow) u_char[filesize];
+    if (databuf == NULL)
+    {
+        console.log("new databuf error", DBG_ERR);
+        return -1;
+    }
+
+    // 移动到文件头
+    fseek(fp, 0L, SEEK_SET);
+
+    int ret = fread(databuf, 1, filesize, fp);
+    if(ret != filesize) {
+        console.log("file read do not complete", DBG_ERR);
+    }
+
 }

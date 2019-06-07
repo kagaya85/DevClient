@@ -51,7 +51,7 @@ public:
     int Connect();
     int WaitForMsg(Head &head, u_char* &databuf, int &buflen);
     int MsgHandler(Head head, u_char* databuf, int buflen);
-    void ReadFileToBuf(const std::string &, u_char* &databuf);
+    int ReadFileToBuf(const std::string &, u_char* &databuf, int &buflen);
 };
 
 
