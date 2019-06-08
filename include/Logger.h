@@ -1,9 +1,12 @@
 #ifndef LOGGER
 #define LOGGER
+#include <Defines.h>
 #include <stdio.h>
 #include <string>
+
 static const int MAX_STR_LEN = 1024;
 
+#define XLS_FILE "ts_count.xls"
 #define CONFIG_FILENAME "ts.conf"
 #define DBG_ENV 0x80
 #define DBG_ERR 0x40
@@ -30,6 +33,7 @@ public:
     std::string getCurrentTime();
     // 日志记录函数
     void log(const std::string & strInfo, int type = 0);
+    void xls(uint ttynum, uint scrnum);
 };
 
 #endif

@@ -93,3 +93,42 @@ void Logger::log(const std::string & strInfo, int type)
         flock(m_fd, LOCK_UN);
     }
 }
+
+void Logger::xls(uint ttynum, uint scrnum)
+{
+	FILE* fp = NULL;
+    fp = fopen(XLS_FILE, "a+");
+
+    try
+    {
+        //若文件流没有打开，则重新打开
+        if (!fp)
+        {
+            char temp[1024] = {0};
+            
+            fp = fopen(XLS_FILE, "a+");
+            
+            if (!fp)
+            {
+                std::cerr << "Can't open xls file." << std::endl;
+                return;
+            }
+        }
+        int m_fd = fileno(fp);
+        //进入临界区，文件上锁
+        flock(m_fd, LOCK_EX);
+        //写信息到xls
+        fprintf(fp, "%s\t%s\t1\t%d\t%d\n", getCurrentTime().c_str(), m_devId.c_str(), ttynum, scrnum);
+        fflush(fp);
+        //离开临界区
+        flock(m_fd, LOCK_UN);
+    }
+    //若发生异常，则先离开临界区，防止死锁
+    catch (...)
+    {
+        int m_fd = fileno(fp);
+        flock(m_fd, LOCK_UN);
+    }
+
+    fclose(fp);
+}

@@ -28,9 +28,9 @@ int g_sucNum = 0;
 // 正在运行计数
 int g_runNum = 0;
 // 建立正在运行进程的进程号与devid的映射关系
-map<int, string> g_devidMap;
+map<int, uint32_t> g_devidMap;
 // 待传送设备号队列
-queue<string> g_devidQueue;
+queue<uint32_t> g_devidQueue;
 // 日志记录器
 Logger console;
 
@@ -127,10 +127,10 @@ void readConfig(Config *config)
     config->serverIp = "192.168.1.246";
     config->port = 40275;
     config->sucExt = 1;     // 进程接受成功后退出 1：退出 0：间隔若干时间再次发送
-    config->minClinum = 5;  // 最小配置终端数量
-    config->maxClinum = 28; // 最大配置终端数量
-    config->minScrnum = 3;  // 每个终端最小虚屏数量
-    config->maxScrnum = 10; // 每个终端最大虚屏数量
+    config->min_ttynum = 5;  // 最小配置终端数量
+    config->max_ttynum = 28; // 最大配置终端数量
+    config->min_scrnum = 3;  // 每个终端最小虚屏数量
+    config->max_scrnum = 10; // 每个终端最大虚屏数量
     config->delLog = 0;     // 删除日志文件
     config->debug = 0;      // DEBUG 设置
     config->showDbg = 0;    // DEBUG 屏幕显示
@@ -175,7 +175,7 @@ void readConfig(Config *config)
                 int v = stoi(value);
                 if (v < 3 || v > 10)
                     v = 5;
-                config->minClinum = v;
+                config->min_ttynum = v;
                 only_once[3] = 1;
             }
             else if (item == "最大配置终端数量")
@@ -185,7 +185,7 @@ void readConfig(Config *config)
                 int v = stoi(value);
                 if (v < 10 || v > 50)
                     v = 5;
-                config->maxClinum = v;
+                config->max_ttynum = v;
                 only_once[4] = 1;
             }
             else if (item == "每个终端最小虚屏数量")
@@ -195,7 +195,7 @@ void readConfig(Config *config)
                 int v = stoi(value);
                 if (v < 1 || v > 3)
                     v = 3;
-                config->minScrnum = v;
+                config->min_scrnum = v;
                 only_once[5] = 1;
             }
             else if (item == "每个终端最大虚屏数量")
@@ -205,7 +205,7 @@ void readConfig(Config *config)
                 int v = stoi(value);
                 if (v < 4 || v >= 16)
                     v = 10;
-                config->maxScrnum = v;
+                config->max_scrnum = v;
                 only_once[6] = 1;
             }
             else if (item == "删除日志文件")
@@ -289,13 +289,13 @@ string confstr(Config &config)
     ss << left << setw(width) << "\t进程接受成功后退出"
        << ": " << config.sucExt << endl;
     ss << left << setw(width) << "\t最小配置终端数量"
-       << ": " << config.minClinum << endl;
+       << ": " << config.min_ttynum << endl;
     ss << left << setw(width) << "\t最大配置终端数量"
-       << ": " << config.maxClinum << endl;
+       << ": " << config.max_ttynum << endl;
     ss << left << setw(width) << "\t每个终端最小虚屏数量"
-       << ": " << config.minScrnum << endl;
+       << ": " << config.min_scrnum << endl;
     ss << left << setw(width) << "\t每个终端最大虚屏数量"
-       << ": " << config.maxScrnum << endl;
+       << ": " << config.max_scrnum << endl;
     ss << left << setw(width) << "\t删除日志文件"
        << ": " << config.delLog << endl;
     ss << left << setw(width) << "\tDEBUG屏幕显示"
@@ -356,11 +356,11 @@ string binstr(const u_char *buf, const int buflen)
 }
 
 // 生成连续的devid，放入队列中
-void createDevid(int startId, int clinum)
+void createDevid(uint32_t startId, int clinum)
 {
     for (int i = 0; i < clinum; i++)
     {
-        g_devidQueue.push(to_string(startId));
+        g_devidQueue.push(startId);
         startId++;
     }
 }
@@ -416,14 +416,14 @@ int main(int argc, char **argv)
             // child process
             else if (cpid == 0)
             {
-                string devid = g_devidQueue.front();
+                uint32_t devid = g_devidQueue.front();
                 // 设置父进程结束后子进程结束
                 prctl(PR_SET_PDEATHSIG, SIGKILL);
                 // DevClient
-                DevClient client;
+                DevClient client(devid);
 
                 // 开启日志记录
-                console.setDevid(devid);
+                console.setDevid(to_string(devid));
                 console.log("Hello world");
 
                 // 与服务器通信
@@ -438,7 +438,7 @@ int main(int argc, char **argv)
             }
             else
             {
-                string devid = g_devidQueue.front();
+                uint32_t devid = g_devidQueue.front();
                 g_devidQueue.pop();       // 弹出
                 g_devidMap[cpid] = devid; // 这里插入，相同cpid会覆盖
                 g_runNum++;
