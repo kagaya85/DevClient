@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 #include "Defines.h"
 
@@ -52,6 +53,8 @@ public:
     int WaitForMsg(Head &head, u_char* &databuf, int &buflen);
     int MsgHandler(Head head, u_char* databuf, int buflen);
     int ReadFileToBuf(const std::string &, u_char* &databuf, int &buflen);
+    u_char* GenAuthStr();
+    bool checkAuthStr(u_char* auth_str, u_int random_num, u_int svr_time);
 };
 
 

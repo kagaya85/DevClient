@@ -5,9 +5,10 @@
 #include "DevClient.h"
 #include "Logger.h"
 
+#include "encrpty.cpp"
+
 extern Config g_config;
 extern Logger console;
-
 
 /**
  * DevClient
@@ -37,7 +38,6 @@ DevClient::DevClient()
 
     //设置的端口为输入参数
     servaddr.sin_port = htons(g_config.port);
-
 }
 
 DevClient::~DevClient()
@@ -47,66 +47,65 @@ DevClient::~DevClient()
 
 int DevClient::Connect()
 {
-     // 请求连接
-    if(connect(sock, (sockaddr*)&servaddr, sizeof(servaddr)) < 0) {
+    // 请求连接
+    if (connect(sock, (sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+    {
         std::ostringstream ss;
-        ss << "create socket error: "<< strerror(errno) <<" (errno: " << errno << ")";
+        ss << "create socket error: " << strerror(errno) << " (errno: " << errno << ")";
         console.log(ss.str(), DBG_ERR);
         exit(-1);
     }
 }
 
-int DevClient::WaitForMsg(Head &head, u_char* &databuf, int &buflen)
+int DevClient::WaitForMsg(Head &head, u_char *&databuf, int &buflen)
 {
     int ret = 0;
-    
+
     buflen = 0;
     ret = read(sock, &head, sizeof(Head));
-    
+
     if (ret)
     {
-        databuf = new(std::nothrow) u_char[head.datalen];
-        if(databuf == NULL)
+        databuf = new (std::nothrow) u_char[head.datalen];
+        if (databuf == NULL)
         {
             console.log("new databuf error", DBG_ERR);
             return -1;
         }
 
         // 读入数据部分
-        while(true)
+        while (true)
         {
             ret = read(sock, databuf + buflen, head.datalen);
             buflen += ret;
-            if(buflen == head.datalen)
+            if (buflen == head.datalen)
                 break;
         }
-
     }
-    else if(ret < 0)
-    {   // error
+    else if (ret < 0)
+    { // error
         std::ostringstream ss;
-        ss << "create socket error: "<< strerror(errno) <<" (errno: " << errno << ")";
+        ss << "create socket error: " << strerror(errno) << " (errno: " << errno << ")";
         console.log(ss.str(), DBG_ERR);
         return -1;
     }
     else
-    {   // EOF
+    { // EOF
         console.log("socket close", DBG_ERR);
         return 0;
     }
-    
+
     return -1;
 }
 
-int DevClient::MsgHandler(Head head, u_char* databuf, int buflen)
+int DevClient::MsgHandler(Head head, u_char *databuf, int buflen)
 {
-    if(databuf == NULL)
+    if (databuf == NULL)
         return;
 
     // 若来源不是服务器，特殊处理
     if (head.origin != SERVER)
     {
-
     }
 
     switch (head.type)
@@ -140,11 +139,11 @@ int DevClient::MsgHandler(Head head, u_char* databuf, int buflen)
     }
 }
 
-int DevClient::ReadFileToBuf(const std::string &filename, u_char* &databuf, int &buflen)
+int DevClient::ReadFileToBuf(const std::string &filename, u_char *&databuf, int &buflen)
 {
     char sendBuff[BUF_SIZE];
 
-    FILE *fp = fopen(filename.c_str(), "rb");  
+    FILE *fp = fopen(filename.c_str(), "rb");
     if (fp == NULL)
     {
         std::ostringstream ss;
@@ -153,14 +152,14 @@ int DevClient::ReadFileToBuf(const std::string &filename, u_char* &databuf, int 
         exit(0);
     }
 
-    // 获取文件位置
-    rewind(fp);
+    // 获取文件大小
+    fseek(fp, 0L, SEEK_END);
     long filesize = ftell(fp) + 1;
 
-    if(databuf)
+    if (databuf)
         delete databuf;
-    
-    databuf = new(std::nothrow) u_char[filesize];
+
+    databuf = new (std::nothrow) u_char[filesize];
     if (databuf == NULL)
     {
         console.log("new databuf error", DBG_ERR);
@@ -168,11 +167,54 @@ int DevClient::ReadFileToBuf(const std::string &filename, u_char* &databuf, int 
     }
 
     // 移动到文件头
-    fseek(fp, 0L, SEEK_SET);
+    rewind(fp);
 
     int ret = fread(databuf, 1, filesize, fp);
-    if(ret != filesize) {
+    if (ret != filesize)
+    {
         console.log("file read do not complete", DBG_ERR);
     }
+}
 
+u_char *DevClient::GenAuthStr()
+{
+    u_int random_num, svr_time;
+    int pos;
+
+    random_num = (u_int)rand();
+    svr_time = (u_int)time(0);
+    svr_time = svr_time ^ (u_int)0xFFFFFFFF;
+    pos = (random_num % 4093);
+
+    u_char key[32] = "yzmond:id*str&to!tongji@by#Auth";
+    u_char *auth_str = new (std::nothrow) u_char[32];
+    if (auth_str == NULL)
+    {
+        console.log("new auth_str error.", DBG_ERR);
+        exit(-1);
+    }
+
+    for (int i = 0; i < 32; i++)
+    {
+        auth_str[i] = key[i] ^ secret[pos];
+        pos = ++pos % 4096;
+    }
+
+    return auth_str;
+}
+
+bool DevClient::checkAuthStr(u_char *auth_str, u_int random_num, u_int svr_time)
+{
+    u_char key[32] = "yzmond:id*str&to!tongji@by#Auth";
+
+    int pos = (random_num % 4093);
+
+    for (int i = 0; i < 32; i++)
+    {
+        if(auth_str[i] != key[i] ^ secret[pos])
+            return false;
+        pos = ++pos % 4096;
+    }
+
+    return true;
 }
