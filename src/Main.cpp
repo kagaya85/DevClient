@@ -1,6 +1,8 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <map>
+#include <queue>
 #include <signal.h>
 #include <sstream>
 #include <stdio.h>
@@ -9,8 +11,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <map>
-#include <queue>
 
 #include "Defines.h"
 #include "DevClient.h"
@@ -46,7 +46,7 @@ static void child(int signo)
         if (WIFEXITED(status)) // exit结束
         {
             cout << "child " << pid << " exited normal exit status=" << WEXITSTATUS(status) << endl;
-            if(WEXITSTATUS(status) == 0)
+            if (WEXITSTATUS(status) == 0)
                 g_sucNum++;
             else
             {
@@ -54,7 +54,6 @@ static void child(int signo)
                 g_devidQueue.push(g_devidMap[pid]);
                 g_runNum--;
             }
-            
         }
         else if (WIFSIGNALED(status)) // 信号结束
         {
@@ -72,7 +71,29 @@ static void child(int signo)
 /**
  * Tool Function
  */
-string &trim(string &str)
+//字符串分割函数
+std::vector<std::string> split(std::string str, std::string pattern)
+{
+    std::string::size_type pos;
+    std::vector<std::string> result;
+    str += pattern; //扩展字符串以方便操作
+    auto size = str.size();
+
+    for (size_t i = 0; i < size; i++)
+    {
+        pos = str.find(pattern, i);
+        if (pos < size)
+        {
+            std::string s = str.substr(i, pos - i);
+            result.push_back(s);
+            i = pos + pattern.size() - 1;
+        }
+    }
+    return result;
+}
+
+// 去掉前后空格
+std::string &trim(std::string &str)
 {
     if (str.empty())
     {
@@ -286,7 +307,7 @@ string confstr(Config &config)
 }
 
 //将buf内的数据格式化后返回string
-string binstr(const char *buf, const int buflen)
+string binstr(const u_char *buf, const int buflen)
 {
     string charPart;
     ostringstream sout;
@@ -337,7 +358,7 @@ string binstr(const char *buf, const int buflen)
 // 生成连续的devid，放入队列中
 void createDevid(int startId, int clinum)
 {
-    for(int i = 0; i < clinum; i++)
+    for (int i = 0; i < clinum; i++)
     {
         g_devidQueue.push(to_string(startId));
         startId++;
@@ -400,11 +421,11 @@ int main(int argc, char **argv)
                 prctl(PR_SET_PDEATHSIG, SIGKILL);
                 // DevClient
                 DevClient client;
-                            
+
                 // 开启日志记录
                 console.setDevid(devid);
                 console.log("Hello world");
-                
+
                 // 与服务器通信
                 sleep(5);
 
@@ -418,8 +439,8 @@ int main(int argc, char **argv)
             else
             {
                 string devid = g_devidQueue.front();
-                g_devidQueue.pop(); // 弹出
-                g_devidMap[cpid] = devid;   // 这里插入，相同cpid会覆盖
+                g_devidQueue.pop();       // 弹出
+                g_devidMap[cpid] = devid; // 这里插入，相同cpid会覆盖
                 g_runNum++;
             }
         }
@@ -429,7 +450,7 @@ int main(int argc, char **argv)
             cout << "已分裂" << g_runNum << "个子进程" << endl;
             // 入睡等待子进程结束
             pause();
-            if(g_sucNum == clinum)  // 全部发送成功，父进程退出
+            if (g_sucNum == clinum) // 全部发送成功，父进程退出
                 break;
         }
     }

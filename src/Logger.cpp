@@ -81,7 +81,7 @@ void Logger::log(const std::string & strInfo, int type)
         //进入临界区，文件上锁
         flock(m_fd, LOCK_EX);
         //写日志信息到文件流
-        fprintf(m_pFileStream, "%s [%s] %s\n", getCurrentTime().c_str(), m_devId.c_str(), strInfo);
+        fprintf(m_pFileStream, "%s [%s] %s\n", getCurrentTime().c_str(), m_devId.c_str(), strInfo.c_str());
         fflush(m_pFileStream);
         //离开临界区
         flock(m_fd, LOCK_UN);

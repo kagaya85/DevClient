@@ -4,6 +4,14 @@
 #include <string>
 static const int MAX_STR_LEN = 1024;
 
+#define CONFIG_FILENAME "ts.conf"
+#define DBG_ENV 0x80
+#define DBG_ERR 0x40
+#define DBG_SPACK 0x20
+#define DBG_RPACK 0x10
+#define DBG_SDATA 0x8
+#define DBG_RDATA 0x4
+
 class Logger
 {
 private:

@@ -15,6 +15,8 @@ extern Logger console;
  */
 DevClient::DevClient()
 {
+    // 初始化随机数种子
+    srand((unsigned)time(NULL));
     // 初始化 socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     { // 参数最后一个0代表自动选择协议
@@ -63,6 +65,9 @@ int DevClient::WaitForMsg(Head &head, u_char *&databuf, int &buflen)
 
     buflen = 0;
     ret = read(sock, &head, sizeof(Head));
+    // 转主机序
+    head.totlen = ntohs(head.totlen);
+    head.datalen = ntohs(head.datalen);
 
     if (ret)
     {
@@ -101,7 +106,7 @@ int DevClient::WaitForMsg(Head &head, u_char *&databuf, int &buflen)
 int DevClient::MsgHandler(Head head, u_char *databuf, int buflen)
 {
     if (databuf == NULL)
-        return;
+        return -1;
 
     // 若来源不是服务器，特殊处理
     if (head.origin != SERVER)
@@ -137,12 +142,12 @@ int DevClient::MsgHandler(Head head, u_char *databuf, int buflen)
     case ACK:
         break;
     }
+
+    return 0;
 }
 
 int DevClient::ReadFileToBuf(const std::string &filename, u_char *&databuf, int &buflen)
 {
-    char sendBuff[BUF_SIZE];
-
     FILE *fp = fopen(filename.c_str(), "rb");
     if (fp == NULL)
     {
@@ -176,12 +181,60 @@ int DevClient::ReadFileToBuf(const std::string &filename, u_char *&databuf, int 
     }
 }
 
-u_char *DevClient::GenAuthStr()
+/**
+ * 获取CPU频率 MHz
+ */
+uint16_t DevClient::GetCpuFreq()
 {
-    u_int random_num, svr_time;
+    std::ifstream fin("/proc/cpuinfo");
+    int N = 100;
+    char line[N];
+    uint16_t res = 0;
+    
+    while (!fin.eof())
+    {
+        fin.getline(line, N);
+        std::vector<std::string> strs = split(line, ":");
+        if (trim(strs[0]) == "cpu MHz")
+        {
+            res = (uint16_t)atoi(trim(strs[1]).c_str());
+            break;
+        }
+    }
+
+    fin.close();
+    return res;
+}
+
+/**
+ * 获取RAM大小，MB
+ */
+uint16_t DevClient::GetRamSize()
+{
+    std::ifstream fin("/proc/meminfo");
+    int N = 100;
+    char line[N];
+    uint16_t res = 0;
+    
+    while (!fin.eof())
+    {
+        fin.getline(line, N);
+        std::vector<std::string> strs = split(line, ":");
+        if (trim(strs[0]) == "MemTotal")
+        {
+            res = (uint16_t)(atoi(trim(strs[1]).c_str()) / 1024); // 转MB
+            break;
+        }
+    }
+    fin.close();
+    return res;
+}
+
+u_char *DevClient::GenAuthStr(int random_num)
+{
+    u_int svr_time;
     int pos;
 
-    random_num = (u_int)rand();
     svr_time = (u_int)time(0);
     svr_time = svr_time ^ (u_int)0xFFFFFFFF;
     pos = (random_num % 4093);
@@ -203,7 +256,7 @@ u_char *DevClient::GenAuthStr()
     return auth_str;
 }
 
-bool DevClient::checkAuthStr(u_char *auth_str, u_int random_num, u_int svr_time)
+bool DevClient::CheckAuthStr(u_char *auth_str, u_int random_num, u_int svr_time)
 {
     u_char key[32] = "yzmond:id*str&to!tongji@by#Auth";
 
@@ -211,10 +264,176 @@ bool DevClient::checkAuthStr(u_char *auth_str, u_int random_num, u_int svr_time)
 
     for (int i = 0; i < 32; i++)
     {
-        if(auth_str[i] != key[i] ^ secret[pos])
+        if (auth_str[i] != (key[i] ^ secret[pos]))
             return false;
         pos = ++pos % 4096;
     }
 
     return true;
+}
+
+void DevClient::SLog(int totlen, int sendlen, const char *typestr, u_char *data)
+{
+    std::ostringstream ss;
+    ss << "发送客户端状态应答[intf=" << typestr << " len=" << totlen << "(C-0)]";
+    console.log(ss.str(), DBG_SPACK);
+    ss.clear();
+    ss.str("");
+    ss << "发送 " << sendlen << "字节";
+    console.log(ss.str(), DBG_SPACK);
+    ss.clear();
+    ss.str("");
+    ss << "(发送数据为:)" << std::endl
+       << binstr(data, sendlen);
+    console.log(ss.str(), DBG_SPACK);
+}
+
+void DevClient::RLog(int totlen, const char *typestr)
+{
+    std::ostringstream ss;
+    ss << "收到客户端状态请求[intf=" << typestr << "]";
+    console.log(ss.str(), DBG_SPACK);
+}
+
+int DevClient::SendVersionRequire(const char *version)
+{
+    Head head;
+    head.origin = CLIENT;
+    head.type = CLIENT_VER_REQ;
+    head.totlen = htons(12);
+    head.ethport = 0x0000;
+    head.datalen = htons(4);
+
+    u_char buf[12];
+    memcpy(buf, &head, sizeof(head));
+    // 最低版本号
+    memcpy(buf + sizeof(head), version, 2);
+    // 次1版本号
+    memcpy(buf + sizeof(head) + 1, "", 1);
+    // 次2版本号
+    memcpy(buf + sizeof(head) + 2, "", 1);
+
+    int ret = 0;
+    ret = write(sock, buf, head.totlen);
+
+    SLog(head.totlen, ret, "最低版本要求", buf);
+}
+
+int DevClient::SendAuthAndConf()
+{
+    int offset;
+    Head head;
+    head.origin = CLIENT;
+    head.type = CLIENT_DEV_INFO;
+    head.totlen = htons(29 * 4);
+    head.ethport = 0x0000;
+    head.datalen = htons(27 * 4);
+
+    u_char buf[head.totlen];
+    memcpy(buf, &head, sizeof(head));
+    // CPU 主频
+    uint16_t int16 = htons(GetCpuFreq());
+    memcpy(buf + sizeof(head), &int16, sizeof(int16));
+    // RAM 大小
+    int16 = htons(GetRamSize());
+    memcpy(buf + sizeof(head) + 2, &int16, sizeof(int16));
+    // FLASH 大小 + 设备内部序列号
+    offset = sizeof(head) + 4;
+    for (int i = 0; i < 2; i++, offset += sizeof(int16))
+    {
+        int16 = htons((uint16_t)rand());
+        memcpy(buf + offset, &int16, sizeof(int16));
+    }
+
+    // 设备组序列号 + 型号 + 软件版本号
+    u_char char128[16];
+    for (int i = 0; i < 3; i++, offset += sizeof(char128))
+    {
+        for (int j = 0; j < 15; j++)
+            char128[j] = ((u_char)rand() % ('z' - '0' + 1)) + '0';
+
+        char128[15] = 0;
+
+        memcpy(buf + offset, &char128, sizeof(char128));
+    }
+
+    // 各个端口数量 16 bytes
+    offset += 16;
+
+    // 认证串
+    int random_num = (u_int)rand();
+    u_char *auth_string = GenAuthStr(random_num);
+    memcpy(buf + offset, auth_string, 32);
+    offset += 32;
+    delete auth_string;
+
+    memcpy(buf + offset, &random_num, sizeof(random_num));
+    offset += sizeof(random_num);
+
+    int ret = 0;
+
+    assert(head.totlen == offset);
+    ret = write(sock, buf, head.totlen);
+
+    SLog(head.totlen, ret, "认证信息", buf);
+}
+
+int DevClient::SendSysInfo()
+{
+    return 0;
+}
+
+int DevClient::SendConfInfo()
+{
+    return 0;
+}
+
+int DevClient::SendProcInfo()
+{
+    return 0;
+}
+
+int DevClient::SendEthInfo()
+{
+    return 0;
+}
+
+int DevClient::SendUsbInfo()
+{
+    return 0;
+}
+
+int DevClient::SendPrtInfo()
+{
+    return 0;
+}
+
+int DevClient::SendTerInfo()
+{
+    return 0;
+}
+
+int DevClient::SendYaTerInfo()
+{
+    return 0;
+}
+
+int DevClient::SendIpTerInfo()
+{
+    return 0;
+}
+
+int DevClient::SendFileInfo()
+{
+    return 0;
+}
+
+int DevClient::SendQueInfo()
+{
+    return 0;
+}
+
+int DevClient::SendAck()
+{
+    return 0;
 }

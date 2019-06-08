@@ -2,14 +2,10 @@
 #define DEFINES
 
 #include <string>
-
-#define CONFIG_FILENAME "ts.conf"
-#define DBG_ENV 0x80
-#define DBG_ERR 0x40
-#define DBG_SPACK 0x20
-#define DBG_RPACK 0x10
-#define DBG_SDATA 0x8
-#define DBG_RDATA 0x4
+#include <sys/types.h>
+#include <unistd.h>
+#include <assert.h>
+#include <vector>
 
 struct Config {
     std::string serverIp;    // ·þÎñÆ÷IP
@@ -36,8 +32,10 @@ struct Head {
 /**
  * tools
  */
-std::string binstr(const char *buf, const int buflen);
+std::string binstr(const u_char *buf, const int buflen);
 std::string confstr(Config &config);
-std::string dbgstr(const unsigned char debug);
+std::string dbgstr(const u_char debug);
+std::vector<std::string> split(std::string str, std::string pattern);
+std::string &trim(std::string &str);
 
 #endif // !DEFINES

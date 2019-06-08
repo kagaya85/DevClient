@@ -1,16 +1,15 @@
 #ifndef DEVCLIENT
 #define DEVCLIENT
     
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include <fstream>
 
 #include "Defines.h"
 
@@ -40,21 +39,46 @@
 
 #define ACK 0xff
 
+struct DevInfo
+{
+
+};
 
 class DevClient
 {
 private:
     struct sockaddr_in servaddr;
     int sock;
+private:
+    int ReadFileToBuf(const std::string &, u_char* &databuf, int &buflen);
+    u_char* GenAuthStr(int random_num);
+    bool CheckAuthStr(u_char* auth_str, u_int random_num, u_int svr_time);
+    void SLog(int totlen, int sendlen, const char* typestr, u_char* data);
+    void RLog(int totlen, const char* typestr);
+    uint16_t GetCpuFreq();
+    uint16_t GetRamSize();
+
+    // Data send function
+    int SendVersionRequire(const char* version = "2.0.0");
+    int SendAuthAndConf();
+    int SendSysInfo();
+    int SendConfInfo();
+    int SendProcInfo();
+    int SendEthInfo();
+    int SendUsbInfo();
+    int SendPrtInfo();
+    int SendTerInfo();
+    int SendYaTerInfo();
+    int SendIpTerInfo();
+    int SendFileInfo();
+    int SendQueInfo();
+    int SendAck();
 public:
     DevClient();
     ~DevClient();
     int Connect();
     int WaitForMsg(Head &head, u_char* &databuf, int &buflen);
     int MsgHandler(Head head, u_char* databuf, int buflen);
-    int ReadFileToBuf(const std::string &, u_char* &databuf, int &buflen);
-    u_char* GenAuthStr();
-    bool checkAuthStr(u_char* auth_str, u_int random_num, u_int svr_time);
 };
 
 
