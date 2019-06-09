@@ -59,13 +59,17 @@ DevClient::~DevClient()
 int DevClient::Connect()
 {
     // 请求连接
+    std::ostringstream ss;
     if (connect(sock, (sockaddr *)&servaddr, sizeof(servaddr)) < 0)
     {
-        std::ostringstream ss;
-        ss << "create socket error: " << strerror(errno) << " (errno: " << errno << ")";
+        ss << "Connect " << g_config.serverIp << ':' << g_config.port << " error, " << strerror(errno) << " (errno: " << errno << ")";
         console.log(ss.str(), DBG_ERR);
         exit(-1);
     }
+
+    ss << "Connected(" << g_config.serverIp << ':' << g_config.port << ") OK.";
+    console.log(ss.str(), DBG_ENV);
+    return 1;
 }
 
 int DevClient::WaitForMsg(Head &head, u_char *&databuf, int &buflen)
@@ -121,7 +125,7 @@ Status DevClient::MsgHandler(Head head, u_char *databuf, int buflen)
     if (head.origin != SERVER)
     {
         console.log("package origin error", DBG_ERR);
-        return;
+        return Close;
     }
 
     switch (head.type)
@@ -137,8 +141,8 @@ Status DevClient::MsgHandler(Head head, u_char *databuf, int buflen)
         }
         else
         {
-            reconn_time = ntohs(data.reconn_time);
-            resend_time = ntohs(data.resend_time);
+            g_config.reconn_time = ntohs(data.reconn_time);
+            g_config.resend_time = ntohs(data.resend_time);
             
             // 验证服务器时间
             if (ntohl(data.svr_time) < 1483200000)
@@ -234,6 +238,8 @@ int DevClient::ReadFileToBuf(const std::string &filename, u_char *&databuf, int 
     {
         console.log("file read do not complete", DBG_ERR);
     }
+
+    return 0;
 }
 
 /**
@@ -376,6 +382,7 @@ int DevClient::SendVersionRequire()
     ret = write(sock, buf, ntohs(head.totlen));
 
     SLog(ntohs(head.totlen), ret, "最低版本要求", buf);
+    return 0;
 }
 
 int DevClient::SendAuthAndConf()
@@ -439,11 +446,12 @@ int DevClient::SendAuthAndConf()
     ret = write(sock, buf, offset);
 
     SLog(offset, ret, "认证信息", buf);
+    return 0;
 }
 
 int DevClient::SendSysInfo()
 {
-    int offset;
+    int offset = 0;
     Head head;
     head.origin = CLIENT;
     head.type = SYS_INFO;
@@ -509,7 +517,7 @@ int DevClient::SendSysInfo()
 
 int DevClient::SendConfInfo()
 {
-    int offset;
+    int offset = 0;
     Head head;
     head.origin = CLIENT;
     head.type = CONF_INFO;
@@ -542,7 +550,7 @@ int DevClient::SendConfInfo()
 
 int DevClient::SendProcInfo()
 {
-    int offset;
+    int offset = 0;
     Head head;
     head.origin = CLIENT;
     head.type = PROC_INFO;
@@ -590,12 +598,11 @@ int DevClient::SendEthInfo(uint16_t eth_port)
     std::string eth_name;
     int N = 1024;
     char line[N];
-    uint16_t res = 0;
 
     // 第一行
     fin.getline(line, N);
 
-    // 1多口需再读入一行
+    // 1端口需再读入一行
     if (eth_port == 1)
         fin.getline(line, N);
 
@@ -643,9 +650,7 @@ int DevClient::SendEthInfo(uint16_t eth_port)
 
 int DevClient::SendUsbInfo()
 {
-    int offset = 0;
     Head head;
-    EthInfo info;
 
     head.origin = CLIENT;
     head.type = USB_INFO;
@@ -668,7 +673,6 @@ int DevClient::SendPrtInfo()
 {
     int offset = 0;
     Head head;
-    EthInfo info;
 
     head.origin = CLIENT;
     head.type = PRT_INFO;
@@ -697,7 +701,6 @@ int DevClient::SendTerInfo()
 {
     int offset = 0;
     Head head;
-    EthInfo info;
 
     head.origin = CLIENT;
     head.type = TER_INFO;
@@ -770,7 +773,7 @@ int DevClient::SendIpTerInfo(uint16_t no)
 
 int DevClient::SendFileInfo()
 {
-    int offset;
+    int offset = 0;
     Head head;
     head.origin = CLIENT;
     head.type = FILE_INFO;
@@ -804,7 +807,7 @@ int DevClient::SendFileInfo()
 
 int DevClient::SendQueInfo()
 {
-    int offset;
+    int offset = 0;
     Head head;
     head.origin = CLIENT;
     head.type = FILE_INFO;

@@ -21,6 +21,9 @@ struct Config {
     bool delLog;    // 删除日志文件
     unsigned char debug;    // DEBUG 设置
     bool showDbg;   // DEBUG 屏幕显示
+    // 连接后获取
+    uint32_t reconn_time;   // 重连间隔
+    uint32_t resend_time;   // 发送完毕后重发间隔
 };
 
 // 报文头结构体

@@ -130,8 +130,6 @@ private:
     uint32_t devid;
     uint16_t ttynum;
     std::vector<uint8_t> scrnum_list;
-    uint32_t reconn_time;
-    uint32_t resend_time;
 private:
     int ReadFileToBuf(const std::string &, u_char* &databuf, int &buflen);
     u_char* GenAuthStr(int random_num);

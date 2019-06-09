@@ -41,11 +41,15 @@ static void child(int signo)
 {
     pid_t pid;
     int status;
+    ostringstream ss;
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
     {
         if (WIFEXITED(status)) // exit结束
         {
-            cout << "child " << pid << " exited normal exit status=" << WEXITSTATUS(status) << endl;
+
+            ss << "child " << pid << " exited normal exit status=" << WEXITSTATUS(status) << endl;
+            console.log(ss.str(), DBG_ENV);
+
             if (WEXITSTATUS(status) == 0)
                 g_sucNum++;
             else
@@ -57,14 +61,19 @@ static void child(int signo)
         }
         else if (WIFSIGNALED(status)) // 信号结束
         {
-            cout << "child " << pid << " exited abnormal signal number=" << WTERMSIG(status) << endl;
+            ss << "child " << pid << " exited abnormal signal number=" << WTERMSIG(status) << endl;
+            console.log(ss.str(), DBG_ENV);
+
             // 非正常结束，将pid对应的devid加入设备号队列
             g_devidQueue.push(g_devidMap[pid]);
             g_runNum--;
         }
         else if (WIFSTOPPED(status)) // 暂停
-            cout << "child " << pid << " stoped signal number=%d\n"
-                 << WSTOPSIG(status) << endl;
+        {
+            ss << "child " << pid << " stoped signal number=%d\n"
+               << WSTOPSIG(status) << endl;
+            console.log(ss.str(), DBG_ENV);        
+        }
     }
 }
 
@@ -126,14 +135,14 @@ void readConfig(Config *config)
 
     config->serverIp = "192.168.1.246";
     config->port = 40275;
-    config->sucExt = 1;     // 进程接受成功后退出 1：退出 0：间隔若干时间再次发送
+    config->sucExt = 1;      // 进程接受成功后退出 1：退出 0：间隔若干时间再次发送
     config->min_ttynum = 5;  // 最小配置终端数量
     config->max_ttynum = 28; // 最大配置终端数量
     config->min_scrnum = 3;  // 每个终端最小虚屏数量
     config->max_scrnum = 10; // 每个终端最大虚屏数量
-    config->delLog = 0;     // 删除日志文件
-    config->debug = 0;      // DEBUG 设置
-    config->showDbg = 0;    // DEBUG 屏幕显示
+    config->delLog = 0;      // 删除日志文件
+    config->debug = 0;       // DEBUG 设置
+    config->showDbg = 0;     // DEBUG 屏幕显示
 
     while (!fin.eof())
     {
@@ -388,7 +397,9 @@ int main(int argc, char **argv)
 
     // 读取配置文件
     readConfig(&g_config);
-    cout << confstr(g_config);
+
+    // 打开log文件
+    console.openFile();
 
     // 生成devid
     createDevid(devid, clinum);
@@ -399,9 +410,14 @@ int main(int argc, char **argv)
     // 设置信号处理函数
     signal(SIGCHLD, child);
 
+    console.setDevid(to_string(getpid()));
+    console.log("主进程启动成功", DBG_ENV);
+    console.log(confstr(g_config), DBG_ENV);
+
     // 开启子进程
     pid_t cpid;
-
+    console.log("子进程fork开始", DBG_ENV);
+    time_t start = time(0);
     while (true)
     {
         if (g_runNum < clinum)
@@ -416,6 +432,9 @@ int main(int argc, char **argv)
             // child process
             else if (cpid == 0)
             {
+                Head head;
+                u_char *databuf = NULL;
+                int buflen = 0;
                 uint32_t devid = g_devidQueue.front();
                 // 设置父进程结束后子进程结束
                 prctl(PR_SET_PDEATHSIG, SIGKILL);
@@ -424,36 +443,57 @@ int main(int argc, char **argv)
 
                 // 开启日志记录
                 console.setDevid(to_string(devid));
-                console.log("Hello world");
 
-                // 与服务器通信
-                sleep(5);
-
-                if (g_config.sucExt) // 接受成功后退出
-                    exit(0);
-                else
+                while (true)
                 {
-                    // 间隔一段时间后重复发送
+                    // 与服务器通信
+                    client.Connect();
+                    // 阻塞等待消息
+                    // client.WaitForMsg(head, databuf, buflen);
+                    // 消息处理
+                    // client.MsgHandler(head, databuf, buflen);
+                    if (databuf)
+                    {
+                        delete databuf;
+                        databuf = NULL;
+                        buflen = 0;
+                    }
+
+                    if (g_config.sucExt) // 接受成功后退出
+                        exit(0);
+                    else // 间隔一段时间后重复发送
+                    {
+                        int sleeptime = g_config.resend_time;
+                        while (sleeptime)
+                            sleeptime -= sleep(sleeptime);
+                    }
                 }
+
+                return 0;
             }
             else
             {
+                // parent process
                 uint32_t devid = g_devidQueue.front();
                 g_devidQueue.pop();       // 弹出
                 g_devidMap[cpid] = devid; // 这里插入，相同cpid会覆盖
                 g_runNum++;
+                cout << "正在运行" << g_runNum << "个子进程" << endl;
             }
         }
-        // parent process
         else
         {
-            cout << "已分裂" << g_runNum << "个子进程" << endl;
             // 入睡等待子进程结束
             pause();
             if (g_sucNum == clinum) // 全部发送成功，父进程退出
                 break;
         }
     }
+
+    time_t end = time(0);
+    ostringstream ss;
+    ss << "子进程fork结束, 总数=" << g_sucNum << ", 耗时=" << end - start << "秒";
+    console.log(ss.str(), DBG_ENV);
 
     return 0;
 }

@@ -30,6 +30,7 @@ public:
     Logger();
     ~Logger();
     void setDevid(const std::string & devId);
+    void openFile();
     std::string getCurrentTime();
     // 日志记录函数
     void log(const std::string & strInfo, int type = 0);

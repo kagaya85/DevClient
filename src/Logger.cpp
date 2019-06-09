@@ -1,31 +1,38 @@
 #include "Logger.h"
 #include "Defines.h"
 #include <iostream>
-#include <sys/file.h>
 #include <string.h>
+#include <sys/file.h>
 
 extern Config g_config;
 
 Logger::Logger()
 {
-    //初始化
-	m_pFileStream = NULL;
-    char temp[1024] = {0};
-    strcat(temp, m_logPath);
-    strcat(temp, m_logName);
-    m_pFileStream = fopen(temp, "a+");
-    if (!m_pFileStream)
-    {
-        std::cerr << "Can't open log file." << std::endl;
-        return;
-    }
+    //nothing
 }
 
 Logger::~Logger()
 {
     //关闭文件流
-	if(m_pFileStream)
-		fclose(m_pFileStream);
+    if (m_pFileStream)
+        fclose(m_pFileStream);
+}
+
+void Logger::openFile()
+{
+    m_pFileStream = NULL;
+    char temp[1024] = {0};
+    strcat(temp, m_logPath);
+    strcat(temp, m_logName);
+    if (g_config.delLog)
+        m_pFileStream = fopen(temp, "w");
+    else
+        m_pFileStream = fopen(temp, "a");
+    if (!m_pFileStream)
+    {
+        std::cerr << "Can't open log file." << std::endl;
+        return;
+    }
 }
 
 //获取系统当前时间
@@ -43,19 +50,19 @@ std::string Logger::getCurrentTime()
 }
 
 // 设置devid
-void Logger::setDevid(const std::string & devId)
+void Logger::setDevid(const std::string &devId)
 {
     this->m_devId = devId;
 }
 
 //写文件操作
-void Logger::log(const std::string & strInfo, int type)
+void Logger::log(const std::string &strInfo, int type)
 {
     if (!strInfo.length())
         return;
-        
-    if(g_config.debug | type)
-        std::cout << strInfo << std::endl;
+
+    if (g_config.debug | type)
+        std::cout << getCurrentTime() << " [" << m_devId << "] " << strInfo << std::endl;
 
     try
     {
@@ -65,12 +72,12 @@ void Logger::log(const std::string & strInfo, int type)
             char temp[1024] = {0};
             strcat(temp, m_logPath);
             strcat(temp, m_logName);
-            
-            if(g_config.delLog)
-                m_pFileStream = fopen(temp, "w");            
+
+            if (g_config.delLog)
+                m_pFileStream = fopen(temp, "w");
             else
-                m_pFileStream = fopen(temp, "a+");
-            
+                m_pFileStream = fopen(temp, "a");
+
             if (!m_pFileStream)
             {
                 std::cerr << "Can't open log file." << std::endl;
@@ -96,7 +103,7 @@ void Logger::log(const std::string & strInfo, int type)
 
 void Logger::xls(uint ttynum, uint scrnum)
 {
-	FILE* fp = NULL;
+    FILE *fp = NULL;
     fp = fopen(XLS_FILE, "a+");
 
     try
@@ -104,10 +111,8 @@ void Logger::xls(uint ttynum, uint scrnum)
         //若文件流没有打开，则重新打开
         if (!fp)
         {
-            char temp[1024] = {0};
-            
             fp = fopen(XLS_FILE, "a+");
-            
+
             if (!fp)
             {
                 std::cerr << "Can't open xls file." << std::endl;
