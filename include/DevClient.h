@@ -195,7 +195,7 @@ private:
     int SendAck();
 public:
     uint16_t ttynum;
-    std::vector<uint8_t> scrnum_list;
+    uint8_t scrnum;
 public:
     DevClient(uint32_t id);
     ~DevClient();

@@ -484,12 +484,7 @@ int main(int argc, char **argv)
                     }
                 }
 
-                uint scrnum = 0;
-                for(uint i = 0; i < client.scrnum_list.size(); i++)
-                {
-                    scrnum += client.scrnum_list[i];
-                }
-                console.xls(client.ttynum, scrnum);
+                console.xls(client.ttynum, client.scrnum);
                 return 0;
             }
             else

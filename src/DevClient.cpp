@@ -17,15 +17,11 @@ DevClient::DevClient(uint32_t id)
 {
     devid = id;
     ttynum = (rand() % (g_config.max_ttynum - g_config.min_ttynum)) + g_config.min_ttynum;
-    // 初始化每个tty终端数量
-    for (int i = 0; i < ttynum; i++)
-    {
-        uint8_t screen_num = (rand() % (g_config.max_scrnum - g_config.min_scrnum)) + g_config.min_scrnum;
-        scrnum_list.push_back(screen_num);
-    }
+
+    scrnum = 0;
 
     // 初始化随机数种子
-    srand((unsigned)time(NULL));
+    srand((unsigned)time(NULL) + id);
     // 初始化 socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     { // 参数最后一个0代表自动选择协议
@@ -792,7 +788,9 @@ int DevClient::SendTerInfo()
 
 int DevClient::SendYaTerInfo(uint16_t no)
 {
-    int datalen = sizeof(TtyInfo) + scrnum_list[no] * sizeof(ScreenInfo);
+    uint8_t snum = uint8_t((rand() % (g_config.max_scrnum - g_config.min_scrnum)) + g_config.min_scrnum);
+    scrnum += snum;
+    int datalen = sizeof(TtyInfo) + snum * sizeof(ScreenInfo);
     int totlen = sizeof(Head) + datalen;
 
     u_char *buf = new u_char[totlen];
@@ -809,8 +807,8 @@ int DevClient::SendYaTerInfo(uint16_t no)
 
     memcpy(buf, &head, sizeof(Head));
 
-    tty.scrnum = scrnum_list[no];
-    tty.act_screen = rand() % scrnum_list[no];
+    tty.scrnum = snum;
+    tty.act_screen = rand() % snum;
     tty.port = tty.config_port = no;
     memset(tty.ter_ip, 0, 4);
     memset(tty.ter_type, 0, 12);
@@ -854,7 +852,9 @@ int DevClient::SendYaTerInfo(uint16_t no)
 
 int DevClient::SendIpTerInfo(uint16_t no)
 {
-    int datalen = sizeof(TtyInfo) + scrnum_list[no] * sizeof(ScreenInfo);
+    uint8_t snum = uint8_t((rand() % (g_config.max_scrnum - g_config.min_scrnum)) + g_config.min_scrnum);
+    scrnum += snum;
+    int datalen = sizeof(TtyInfo) + snum * sizeof(ScreenInfo);
     int totlen = sizeof(Head) + datalen;
 
     u_char *buf = new u_char[totlen];
@@ -871,8 +871,8 @@ int DevClient::SendIpTerInfo(uint16_t no)
 
     memcpy(buf, &head, sizeof(Head));
 
-    tty.scrnum = scrnum_list[no];
-    tty.act_screen = rand() % scrnum_list[no];
+    tty.scrnum = snum;
+    tty.act_screen = rand() % snum;
     tty.port = tty.config_port = no;
     memset(tty.ter_ip, 10, 4);
     memset(tty.ter_type, 0, 12);
