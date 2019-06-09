@@ -832,6 +832,10 @@ int DevClient::SendYaTerInfo(uint16_t no)
         scr.port = htons(g_config.port);
         scr.ip_addr = htonl(inet_addr(g_config.serverIp.c_str()));
         scr.con_time = htonl((uint32_t)time(0));
+        scr.stbytes = rand();
+        scr.rtbytes = rand();
+        scr.ssbytes = rand();
+        scr.rsbytes = rand();
         const char *state[] = {
             "开机",
             "关机",
@@ -897,6 +901,10 @@ int DevClient::SendIpTerInfo(uint16_t no)
         scr.port = htons(g_config.port);
         scr.ip_addr = htonl(inet_addr(g_config.serverIp.c_str()));
         scr.con_time = htonl((uint32_t)time(0));
+        scr.stbytes = rand();
+        scr.rtbytes = rand();
+        scr.ssbytes = rand();
+        scr.rsbytes = rand();
         const char *state[] = {
             "开机",
             "关机",
