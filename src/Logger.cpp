@@ -43,7 +43,7 @@ std::string Logger::getCurrentTime()
     time(&curTime);
     pTimeInfo = localtime(&curTime);
     char temp[MAX_STR_LEN] = {0};
-    // sprintf(temp, "%04d-%02d-%02d %02d:%02d:%02d", pTimeInfo->tm_year + 1990, pTimeInfo->tm_mon + 1, pTimeInfo->tm_mday,pTimeInfo->tm_hour, pTimeInfo->tm_min, pTimeInfo->tm_sec);
+    // sprintf(temp, "%04d-%02d-%02d %02d:%02d:%02d", pTimeInfo->tm_year + 1900, pTimeInfo->tm_mon + 1, pTimeInfo->tm_mday,pTimeInfo->tm_hour, pTimeInfo->tm_min, pTimeInfo->tm_sec);
     sprintf(temp, "%02d:%02d:%02d", pTimeInfo->tm_hour, pTimeInfo->tm_min, pTimeInfo->tm_sec);
     std::string pTemp = temp;
     return pTemp;
@@ -61,7 +61,10 @@ void Logger::log(const std::string &strInfo, int type)
     if (!strInfo.length())
         return;
 
-    if (g_config.debug | type)
+    if (!(g_config.debug | type))   // ÊÇ·ñ¼ÇÂ¼
+        return;
+
+    if(g_config.showDbg)    
         std::cout << getCurrentTime() << " [" << m_devId << "] " << strInfo << std::endl;
 
     try

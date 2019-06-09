@@ -53,6 +53,29 @@ struct AuthReq
     uint32_t svr_time;
 };
 
+struct DevConf{
+    uint16_t cpu_freq;
+    uint16_t ram_size;
+    uint16_t flash_size;
+    uint16_t inner_num;
+    uint8_t group_num[16];
+    uint8_t dev_type[16];
+    uint8_t software_version[16];
+    uint8_t eth_num;
+    uint8_t sync_num;
+    uint8_t async_num;
+    uint8_t exchange_num;
+    uint8_t usb_num;
+    uint8_t printer_num;
+    uint8_t pad0[2];
+    uint32_t devid;
+    uint8_t devInner_num;
+    uint8_t pad1;
+    uint16_t pad2;
+    u_char auth_string[32];
+    uint32_t random_num;
+};
+
 struct SysInfo
 {
     int user_time;
@@ -132,10 +155,10 @@ private:
     std::vector<uint8_t> scrnum_list;
 private:
     int ReadFileToBuf(const std::string &, u_char* &databuf, int &buflen);
-    u_char* GenAuthStr(int random_num);
+    void EncryptData(u_char* buf, int random_num, uint buflen);
     bool CheckAuthStr(u_char* auth_str, u_int random_num);
     void SLog(int totlen, int sendlen, const char* typestr, u_char* data);
-    void RLog(int totlen, const char* typestr);
+    void RLog(Head head, const char* typestr, u_char *data);
     uint16_t GetCpuFreq();
     uint16_t GetRamSize();
 
@@ -158,7 +181,7 @@ public:
     DevClient(uint32_t id);
     ~DevClient();
     int Connect();
-    int WaitForMsg(Head &head, u_char* &databuf, int &buflen);
+    Status WaitForMsg(Head &head, u_char* &databuf, int &buflen);
     Status MsgHandler(Head head, u_char* databuf, int buflen);
 };
 

@@ -64,7 +64,7 @@ int DevClient::Connect()
     {
         ss << "Connect " << g_config.serverIp << ':' << g_config.port << " error, " << strerror(errno) << " (errno: " << errno << ")";
         console.log(ss.str(), DBG_ERR);
-        exit(-1);
+        return -1;
     }
 
     ss << "Connected(" << g_config.serverIp << ':' << g_config.port << ") OK.";
@@ -72,12 +72,18 @@ int DevClient::Connect()
     return 1;
 }
 
-int DevClient::WaitForMsg(Head &head, u_char *&databuf, int &buflen)
+Status DevClient::WaitForMsg(Head &head, u_char *&databuf, int &buflen)
 {
     int ret = 0;
 
     buflen = 0;
     ret = read(sock, &head, sizeof(Head));
+    if(ret < 0)
+    {
+        console.log("socket close", DBG_ENV);
+        return Close;
+    }
+    
     // 转主机序
     head.totlen = ntohs(head.totlen);
     head.datalen = ntohs(head.datalen);
@@ -88,7 +94,7 @@ int DevClient::WaitForMsg(Head &head, u_char *&databuf, int &buflen)
         if (databuf == NULL)
         {
             console.log("new databuf error", DBG_ERR);
-            return -1;
+            return Close;
         }
 
         // 读入数据部分
@@ -99,21 +105,66 @@ int DevClient::WaitForMsg(Head &head, u_char *&databuf, int &buflen)
             if (buflen == head.datalen)
                 break;
         }
+
+        switch (head.type)
+        {
+        case SERVER_AUTH_REQ:
+        {
+            RLog(head, "认证信息", databuf);
+            break;
+        }
+        case SYS_INFO:
+            RLog(head, "系统信息", databuf);
+            break;
+        case CONF_INFO:
+            RLog(head, "配置信息", databuf);
+            break;
+        case PROC_INFO:
+            RLog(head, "进程信息", databuf);
+            break;
+        case ETH_INFO:
+            RLog(head, "以太口信息", databuf);
+            break;
+        case USB_INFO:
+            RLog(head, "USB信息", databuf);
+            break;
+        case PRT_INFO:
+            RLog(head, "打印口信息", databuf);
+            break;
+        case TER_INFO:
+            RLog(head, "终端信息", databuf);
+            break;
+        case YATER_INFO:
+            RLog(head, "哑终端信息", databuf);
+            break;
+        case IPTER_INFO:
+            RLog(head, "IP终端信息", databuf);
+            break;
+        case FILE_INFO:
+            RLog(head, "文件列表信息", databuf);
+            break;
+        case QUE_INFO:
+            RLog(head, "打印队列信息", databuf);
+            break;
+        case ACK:
+            RLog(head, "ACK", databuf);
+            break;
+        }
     }
     else if (ret < 0)
     { // error
         std::ostringstream ss;
         ss << "create socket error: " << strerror(errno) << " (errno: " << errno << ")";
         console.log(ss.str(), DBG_ERR);
-        return -1;
+        return Close;
     }
     else
     { // EOF
-        console.log("socket close", DBG_ERR);
-        return 0;
+        console.log("socket close", DBG_ENV);
+        return Close;
     }
 
-    return -1;
+    return Continue;
 }
 
 Status DevClient::MsgHandler(Head head, u_char *databuf, int buflen)
@@ -134,7 +185,7 @@ Status DevClient::MsgHandler(Head head, u_char *databuf, int buflen)
     {
         AuthReq data;
         memcpy(&data, databuf, buflen);
-        if(ntohs(data.main) < 2)
+        if (ntohs(data.main) < 2)
         {
             console.log("服务器版本过低", DBG_RPACK);
             SendVersionRequire();
@@ -143,7 +194,7 @@ Status DevClient::MsgHandler(Head head, u_char *databuf, int buflen)
         {
             g_config.reconn_time = ntohs(data.reconn_time);
             g_config.resend_time = ntohs(data.resend_time);
-            
+
             // 验证服务器时间
             if (ntohl(data.svr_time) < 1483200000)
             {
@@ -151,7 +202,7 @@ Status DevClient::MsgHandler(Head head, u_char *databuf, int buflen)
                 return Close;
             }
             // 验证加密串
-            if(CheckAuthStr(data.authstr, ntohl(data.random_num)))
+            if (CheckAuthStr(data.authstr, ntohl(data.random_num)))
             {
                 console.log("认证非法", DBG_RPACK);
                 return Close;
@@ -291,7 +342,7 @@ uint16_t DevClient::GetRamSize()
     return res;
 }
 
-u_char *DevClient::GenAuthStr(int random_num)
+void DevClient::EncryptData(u_char *buf, int random_num, uint buflen)
 {
     u_int svr_time;
     int pos;
@@ -300,21 +351,11 @@ u_char *DevClient::GenAuthStr(int random_num)
     svr_time = svr_time ^ (u_int)0xFFFFFFFF;
     pos = (random_num % 4093);
 
-    u_char key[32] = "yzmond:id*str&to!tongji@by#Auth";
-    u_char *auth_str = new (std::nothrow) u_char[32];
-    if (auth_str == NULL)
+    for (int i = 0; i < buflen; i++)
     {
-        console.log("new auth_str error.", DBG_ERR);
-        exit(-1);
+        buf[i] = buf[i] ^ secret[pos];
+        pos = ++pos % 4093;
     }
-
-    for (int i = 0; i < 32; i++)
-    {
-        auth_str[i] = key[i] ^ secret[pos];
-        pos = ++pos % 4096;
-    }
-
-    return auth_str;
 }
 
 bool DevClient::CheckAuthStr(u_char *auth_str, u_int random_num)
@@ -323,11 +364,11 @@ bool DevClient::CheckAuthStr(u_char *auth_str, u_int random_num)
 
     int pos = (random_num % 4093);
 
-    for (int i = 0; i < 32; i++)
+    for (u_int i = 0; i < 32; i++)
     {
         if (auth_str[i] != (key[i] ^ secret[pos]))
             return false;
-        pos = ++pos % 4096;
+        pos = ++pos % 4093;
     }
 
     return true;
@@ -349,11 +390,26 @@ void DevClient::SLog(int totlen, int sendlen, const char *typestr, u_char *data)
     console.log(ss.str(), DBG_SDATA);
 }
 
-void DevClient::RLog(int totlen, const char *typestr)
+void DevClient::RLog(Head head, const char *typestr, u_char *data)
 {
     std::ostringstream ss;
-    ss << "收到客户端状态请求[intf=" << typestr << "]";
-    console.log(ss.str(), DBG_SPACK);
+    int totlen = head.totlen;
+    u_char* buf = new u_char[totlen];
+    memcpy(buf, &head, sizeof(Head));
+    memcpy(buf + sizeof(Head), data, head.datalen);
+
+    ss << "收到服务端状态请求[intf=" << typestr << "]";
+    console.log(ss.str(), DBG_RPACK);
+    ss.clear();
+    ss.str("");
+    ss << "读取 " << totlen << "字节";
+    console.log(ss.str(), DBG_RPACK);
+    ss.clear();
+    ss.str("");
+    ss << "(读取数据为:)" << std::endl
+       << binstr(buf, totlen);
+    console.log(ss.str(), DBG_RDATA);
+    delete buf;
 }
 
 int DevClient::SendVersionRequire()
@@ -387,65 +443,48 @@ int DevClient::SendVersionRequire()
 
 int DevClient::SendAuthAndConf()
 {
-    int offset;
+    uint totlen = sizeof(Head) + sizeof(DevConf);
     Head head;
+    DevConf data;
     head.origin = CLIENT;
     head.type = CLIENT_DEV_INFO;
     head.totlen = htons(29 * 4);
     head.ethport = 0x0000;
     head.datalen = htons(27 * 4);
 
-    u_char buf[head.totlen];
-    memcpy(buf, &head, sizeof(head));
-    // CPU 主频
-    uint16_t int16 = htons(GetCpuFreq());
-    memcpy(buf + sizeof(head), &int16, sizeof(int16));
-    // RAM 大小
-    int16 = htons(GetRamSize());
-    memcpy(buf + sizeof(head) + 2, &int16, sizeof(int16));
     // FLASH 大小 + 设备内部序列号
-    offset = sizeof(head) + 4;
-    for (int i = 0; i < 2; i++, offset += sizeof(int16))
-    {
-        int16 = htons((uint16_t)rand());
-        memcpy(buf + offset, &int16, sizeof(int16));
-    }
+    data.flash_size = htons((uint16_t)rand());
+    data.inner_num = htons((uint16_t)rand());
 
     // 设备组序列号 + 型号 + 软件版本号
-    u_char char128[16];
-    for (int i = 0; i < 3; i++, offset += sizeof(char128))
-    {
-        for (int j = 0; j < 15; j++)
-            char128[j] = ((u_char)rand() % ('z' - '0' + 1)) + '0';
+    // u_char char128[16];
+    // for (int i = 0; i < 3; i++, offset += sizeof(char128))
+    // {
+    //     for (int j = 0; j < 15; j++)
+    //         char128[j] = ((u_char)rand() % ('z' - '0' + 1)) + '0';
 
-        char128[15] = 0;
-
-        memcpy(buf + offset, &char128, sizeof(char128));
-    }
+    //     char128[15] = 0;
+    // }
 
     // 各个端口数量 8 bytes
-    offset += 8;
-
-    uint32_t did = htonl(devid);
-    memcpy(buf + offset, &did, sizeof(did));
-
-    offset += 8;
-
+    data.devid = htonl(devid);
+    data.devInner_num = 1;
+    memcpy(data.auth_string, "yzmond:id*str&to!tongji@by#Auth", 32);
     // 认证串
-    int random_num = (u_int)rand();
-    u_char *auth_string = GenAuthStr(random_num);
-    memcpy(buf + offset, auth_string, 32);
-    offset += 32;
-    delete auth_string;
+    uint32_t random_num = (uint32_t)rand();
+    data.random_num = htonl(random_num);
+    // 加密
+    EncryptData((u_char *)&data, random_num, 104);
 
-    memcpy(buf + offset, &random_num, sizeof(random_num));
-    offset += sizeof(random_num);
+    u_char *buf = new u_char[totlen];
+    memcpy(buf, &head, sizeof(head));
+    memcpy(buf + sizeof(Head), &data, sizeof(DevConf));
 
     int ret = 0;
+    ret = write(sock, buf, totlen);
+    SLog(totlen, ret, "认证信息", buf);
 
-    ret = write(sock, buf, offset);
-
-    SLog(offset, ret, "认证信息", buf);
+    delete buf;
     return 0;
 }
 

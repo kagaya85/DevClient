@@ -30,9 +30,9 @@ struct Config {
 struct Head {
     u_char origin;
     u_char type;
-    short totlen;
-    short ethport;
-    short datalen;
+    uint16_t totlen;
+    uint16_t ethport;
+    uint16_t datalen;
 };
 
 /**

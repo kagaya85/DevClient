@@ -41,14 +41,14 @@ static void child(int signo)
 {
     pid_t pid;
     int status;
-    ostringstream ss;
+    // ostringstream ss;
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
     {
         if (WIFEXITED(status)) // exit结束
         {
 
-            ss << "child " << pid << " exited normal exit status=" << WEXITSTATUS(status) << endl;
-            console.log(ss.str(), DBG_ENV);
+            // ss << "child " << pid << " exited normal exit status=" << WEXITSTATUS(status);
+            // console.log(ss.str(), DBG_ENV);
 
             if (WEXITSTATUS(status) == 0)
                 g_sucNum++;
@@ -56,13 +56,13 @@ static void child(int signo)
             {
                 // 非正常结束，将pid对应的devid加入设备号队列
                 g_devidQueue.push(g_devidMap[pid]);
-                g_runNum--;
             }
+            g_runNum--;
         }
         else if (WIFSIGNALED(status)) // 信号结束
         {
-            ss << "child " << pid << " exited abnormal signal number=" << WTERMSIG(status) << endl;
-            console.log(ss.str(), DBG_ENV);
+            // ss << "child " << pid << " exited abnormal signal number=" << WTERMSIG(status);
+            // console.log(ss.str(), DBG_ENV);
 
             // 非正常结束，将pid对应的devid加入设备号队列
             g_devidQueue.push(g_devidMap[pid]);
@@ -70,10 +70,10 @@ static void child(int signo)
         }
         else if (WIFSTOPPED(status)) // 暂停
         {
-            ss << "child " << pid << " stoped signal number=%d\n"
-               << WSTOPSIG(status) << endl;
-            console.log(ss.str(), DBG_ENV);        
+            // ss << "child " << pid << " stoped signal number=%d\n" << WSTOPSIG(status);
+            // console.log(ss.str(), DBG_ENV);
         }
+        // ss.str("");
     }
 }
 
@@ -420,13 +420,14 @@ int main(int argc, char **argv)
     time_t start = time(0);
     while (true)
     {
-        if (g_runNum < clinum)
+        if (g_sucNum + g_runNum < clinum && g_runNum < 100)
         {
             cpid = fork();
             if (cpid < 0)
             {
                 // 分裂失败
-                sleep(1); // 1s 后重试
+                if (sleep(5) == 5) // 重试
+                    child(SIGCHLD);
                 continue;
             }
             // child process
@@ -444,14 +445,24 @@ int main(int argc, char **argv)
                 // 开启日志记录
                 console.setDevid(to_string(devid));
 
+                Status sta;
                 while (true)
                 {
                     // 与服务器通信
                     client.Connect();
-                    // 阻塞等待消息
-                    // client.WaitForMsg(head, databuf, buflen);
-                    // 消息处理
-                    // client.MsgHandler(head, databuf, buflen);
+
+                    while (true)
+                    {
+                        // 阻塞等待消息
+                        sta = client.WaitForMsg(head, databuf, buflen);
+                        if (sta == Close)
+                            break;
+                        // 消息处理
+                        sta = client.MsgHandler(head, databuf, buflen);
+                        if (sta == Close)
+                            break;
+                    }
+
                     if (databuf)
                     {
                         delete databuf;
@@ -460,10 +471,13 @@ int main(int argc, char **argv)
                     }
 
                     if (g_config.sucExt) // 接受成功后退出
-                        exit(0);
+                    {
+                        console.log("client exit.");
+                        break;
+                    }
                     else // 间隔一段时间后重复发送
                     {
-                        int sleeptime = g_config.resend_time;
+                        uint sleeptime = g_config.resend_time;
                         while (sleeptime)
                             sleeptime -= sleep(sleeptime);
                     }
@@ -478,14 +492,18 @@ int main(int argc, char **argv)
                 g_devidQueue.pop();       // 弹出
                 g_devidMap[cpid] = devid; // 这里插入，相同cpid会覆盖
                 g_runNum++;
-                cout << "正在运行" << g_runNum << "个子进程" << endl;
             }
         }
         else
         {
             // 入睡等待子进程结束
-            pause();
-            if (g_sucNum == clinum) // 全部发送成功，父进程退出
+            uint sleeptime = 10;
+            if (g_sucNum < clinum)
+            {
+                if (sleep(sleeptime) == sleeptime) // 睡够事件后主动回收子进程
+                    child(SIGCHLD);
+            }
+            else // 全部发送成功，父进程退出
                 break;
         }
     }
