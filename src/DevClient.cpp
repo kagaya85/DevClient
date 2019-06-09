@@ -78,12 +78,12 @@ Status DevClient::WaitForMsg(Head &head, u_char *&databuf, int &buflen)
 
     buflen = 0;
     ret = read(sock, &head, sizeof(Head));
-    if(ret < 0)
+    if (ret < 0)
     {
         console.log("socket close", DBG_ENV);
         return Close;
     }
-    
+
     // 转主机序
     head.totlen = ntohs(head.totlen);
     head.datalen = ntohs(head.datalen);
@@ -132,7 +132,7 @@ Status DevClient::WaitForMsg(Head &head, u_char *&databuf, int &buflen)
             RLog(head, "打印口信息", databuf);
             break;
         case TER_INFO:
-            RLog(head, "终端信息", databuf);
+            RLog(head, "终端服务信息", databuf);
             break;
         case YATER_INFO:
             RLog(head, "哑终端信息", databuf);
@@ -266,7 +266,7 @@ int DevClient::ReadFileToBuf(const std::string &filename, u_char *&databuf, int 
 
     // 获取文件大小
     fseek(fp, 0L, SEEK_END);
-    long filesize = ftell(fp) + 1;
+    long filesize = ftell(fp);
 
     if (filesize > 8191)
         filesize = 8191;
@@ -287,7 +287,9 @@ int DevClient::ReadFileToBuf(const std::string &filename, u_char *&databuf, int 
     int ret = fread(databuf, 1, filesize, fp);
     if (ret != filesize)
     {
-        console.log("file read do not complete", DBG_ERR);
+        std::ostringstream ss;
+        ss << "file read do not complete, filesize=" << filesize << ",ret=" << ret;
+        console.log(ss.str(), DBG_ERR);
     }
 
     return 0;
@@ -344,31 +346,28 @@ uint16_t DevClient::GetRamSize()
 
 void DevClient::EncryptData(u_char *buf, int random_num, uint buflen)
 {
-    u_int svr_time;
     int pos;
-
-    svr_time = (u_int)time(0);
-    svr_time = svr_time ^ (u_int)0xFFFFFFFF;
     pos = (random_num % 4093);
 
-    for (int i = 0; i < buflen; i++)
+    for (uint i = 0; i < buflen; i++)
     {
-        buf[i] = buf[i] ^ secret[pos];
-        pos = ++pos % 4093;
+        buf[i] ^= secret[pos];
+        pos++;
+        pos = pos % 4093;
     }
 }
 
 bool DevClient::CheckAuthStr(u_char *auth_str, u_int random_num)
 {
-    u_char key[32] = "yzmond:id*str&to!tongji@by#Auth";
+    u_char key[] = AUTH_STR;
 
     int pos = (random_num % 4093);
-
     for (u_int i = 0; i < 32; i++)
     {
         if (auth_str[i] != (key[i] ^ secret[pos]))
             return false;
-        pos = ++pos % 4093;
+        pos++;
+        pos = pos % 4093;
     }
 
     return true;
@@ -394,7 +393,7 @@ void DevClient::RLog(Head head, const char *typestr, u_char *data)
 {
     std::ostringstream ss;
     int totlen = head.totlen;
-    u_char* buf = new u_char[totlen];
+    u_char *buf = new u_char[totlen];
     memcpy(buf, &head, sizeof(Head));
     memcpy(buf + sizeof(Head), data, head.datalen);
 
@@ -448,9 +447,9 @@ int DevClient::SendAuthAndConf()
     DevConf data;
     head.origin = CLIENT;
     head.type = CLIENT_DEV_INFO;
-    head.totlen = htons(29 * 4);
+    head.totlen = htons(totlen);
     head.ethport = 0x0000;
-    head.datalen = htons(27 * 4);
+    head.datalen = htons(sizeof(DevConf));
 
     // FLASH 大小 + 设备内部序列号
     data.flash_size = htons((uint16_t)rand());
@@ -467,9 +466,16 @@ int DevClient::SendAuthAndConf()
     // }
 
     // 各个端口数量 8 bytes
+    data.eth_num = rand() % 3;
+    data.sync_num = rand() % 3;
+    data.async_num = (rand() % 3) * 8;
+    async_num = data.async_num;
+    data.exchange_num = (rand() % 4) * 8;
+    data.usb_num = rand() % 2;
+    data.printer_num = rand() % 2;
     data.devid = htonl(devid);
     data.devInner_num = 1;
-    memcpy(data.auth_string, "yzmond:id*str&to!tongji@by#Auth", 32);
+    memcpy(data.auth_string, AUTH_STR, 32);
     // 认证串
     uint32_t random_num = (uint32_t)rand();
     data.random_num = htonl(random_num);
@@ -522,7 +528,6 @@ int DevClient::SendSysInfo()
             break;
         }
     }
-    fin.clear();
     fin.close();
 
     // MEM
@@ -544,7 +549,7 @@ int DevClient::SendSysInfo()
     }
     fin.close();
 
-    memcpy(buf, &info, sizeof(info));
+    memcpy(buf + sizeof(Head), &info, sizeof(info));
     offset += sizeof(info);
 
     int ret = 0;
@@ -573,7 +578,7 @@ int DevClient::SendConfInfo()
 
     memcpy(buf, &head, sizeof(head));
     offset += sizeof(head);
-    memcpy(buf + offset, buf, buflen);
+    memcpy(buf + offset, databuf, buflen);
     offset += buflen;
     buf[offset] = '\0';
     offset += 1;
@@ -606,7 +611,7 @@ int DevClient::SendProcInfo()
 
     memcpy(buf, &head, sizeof(head));
     offset += sizeof(head);
-    memcpy(buf + offset, buf, buflen);
+    memcpy(buf + offset, databuf, buflen);
     offset += buflen;
     buf[offset] = '\0';
     offset++;
@@ -717,7 +722,7 @@ int DevClient::SendPrtInfo()
     head.type = PRT_INFO;
     head.totlen = htons(sizeof(head) + 4 + 32);
     head.ethport = htons(0x0000);
-    head.datalen = htons(sizeof(4));
+    head.datalen = htons(4 + 32);
 
     u_char *buf = new u_char[head.totlen];
     memcpy(buf, &head, sizeof(head));
@@ -738,74 +743,174 @@ int DevClient::SendPrtInfo()
 
 int DevClient::SendTerInfo()
 {
-    int offset = 0;
+    int totlen = sizeof(Head) + sizeof(TermServ);
     Head head;
+    TermServ data;
 
     head.origin = CLIENT;
     head.type = TER_INFO;
-    head.totlen = htons(sizeof(head) + 16 + 254 + 2);
+    head.totlen = htons(totlen);
     head.ethport = htons(0x0000);
-    head.datalen = htons(16 + 254 + 2);
+    head.datalen = htons(sizeof(TermServ));
 
-    u_char *buf = new u_char[head.totlen];
+    int async_term_num = 0;
+    if (async_num != 0)
+    {
+        async_term_num = ((uint8_t)rand()) % async_num;
+        if (async_term_num > ttynum)
+            ttynum = async_num;
+    }
+    int ipterm_num = ttynum - async_term_num;
 
+    for (int i = 0; i < 16; i++)
+    {
+        if (i < async_term_num)
+            data.ya_term[i] = 1;
+        else
+            data.ya_term[i] = 0;
+    }
+
+    for (int i = 0; i < 254; i++)
+    {
+        if (i < ipterm_num)
+            data.ip_term[i] = 1;
+        else
+            data.ip_term[i] = 0;
+    }
+    data.term_num = (rand()%(270 - ttynum)) + ttynum;
+
+    u_char *buf = new u_char[totlen];
     memcpy(buf, &head, sizeof(head));
-    offset = sizeof(head);
+    memcpy(buf + sizeof(Head), &data, sizeof(TermServ));
 
-    uint16_t num = htons(ttynum);
-    memcpy(buf + 16 + 254, &num, sizeof(num));
-    offset = offset + 16 + 254 + 2;
+    int ret = write(sock, buf, totlen);
 
-    int ret = write(sock, buf, offset);
-
-    SLog(offset, ret, "终端服务信息", buf);
+    SLog(totlen, ret, "终端服务信息", buf);
     delete buf;
     return 0;
 }
 
 int DevClient::SendYaTerInfo(uint16_t no)
 {
+    int datalen = sizeof(TtyInfo) + scrnum_list[no] * sizeof(ScreenInfo);
+    int totlen = sizeof(Head) + datalen;
 
-    int datalen = sizeof(Head) + (7 * 4) + scrnum_list[no] * sizeof(ScreenInfo);
+    u_char *buf = new u_char[totlen];
 
-    u_char *buf = new u_char[sizeof(Head) + datalen];
-
-    int offset;
     Head head;
+    TtyInfo tty;
+    ScreenInfo scr;
+
     head.origin = CLIENT;
     head.type = YATER_INFO;
     head.ethport = htons(no);
-    head.totlen = htons(datalen + sizeof(Head));
+    head.totlen = htons(totlen);
     head.datalen = htons(datalen);
 
     memcpy(buf, &head, sizeof(Head));
-    offset = sizeof(Head);
-    buf[offset + 3] = (u_char)scrnum_list[no];
 
-    write(sock, buf, sizeof(Head) + datalen);
+    tty.scrnum = scrnum_list[no];
+    tty.act_screen = rand() % scrnum_list[no];
+    tty.port = tty.config_port = no;
+    memset(tty.ter_ip, 0, 4);
+    memset(tty.ter_type, 0, 12);
+    memcpy(tty.ter_type, "串口终端", 12);
+    memset(tty.ter_state, 0, 8);    
+    if (rand() % 2)
+    {
+        memcpy(tty.ter_state, "正常", strlen("正常"));
+    }
+    else
+    {
+        memcpy(tty.ter_state, "菜单", strlen("菜单"));
+    }
+    memcpy(buf + sizeof(Head), &tty, sizeof(TtyInfo));
+
+    for (int i = 0; i < tty.scrnum; i++)
+    {
+        scr.no = i + 1;
+        scr.port = htons(g_config.port);
+        scr.ip_addr = htonl(inet_addr(g_config.serverIp.c_str()));
+        scr.con_time = htonl((uint32_t)time(0));
+        const char *state[] = {
+            "开机",
+            "关机",
+            "已登录"};
+        int index = rand() % 3;
+        memcpy(scr.state, state[index], strlen(state[index]));
+
+        memcpy(buf + sizeof(Head) + sizeof(TtyInfo) + i * sizeof(ScreenInfo), &scr, sizeof(ScreenInfo));
+    }
+
+    int ret = write(sock, buf, totlen);
+    SLog(totlen, ret, "哑终端信息", buf);
 
     return 0;
 }
 
 int DevClient::SendIpTerInfo(uint16_t no)
 {
-    int datalen = sizeof(Head) + (7 * 4) + scrnum_list[no] * sizeof(ScreenInfo);
+    int datalen = sizeof(TtyInfo) + scrnum_list[no] * sizeof(ScreenInfo);
+    int totlen = sizeof(Head) + datalen;
 
-    u_char *buf = new u_char[sizeof(Head) + datalen];
+    u_char *buf = new u_char[totlen];
 
-    int offset;
     Head head;
+    TtyInfo tty;
+    ScreenInfo scr;
+
     head.origin = CLIENT;
     head.type = IPTER_INFO;
     head.ethport = htons(no);
-    head.totlen = htons(datalen + sizeof(Head));
+    head.totlen = htons(totlen);
     head.datalen = htons(datalen);
 
     memcpy(buf, &head, sizeof(Head));
-    offset = sizeof(Head);
-    buf[offset + 3] = (u_char)scrnum_list[no];
 
-    write(sock, buf, sizeof(Head) + datalen);
+    tty.scrnum = scrnum_list[no];
+    tty.act_screen = rand() % scrnum_list[no];
+    tty.port = tty.config_port = no;
+    memset(tty.ter_ip, 10, 4);
+    memset(tty.ter_type, 0, 12);
+    memset(tty.ter_state, 0, 8);    
+    if (rand() % 2)
+    {
+        memcpy(tty.ter_type, "IP终端", strlen("IP终端"));
+    }
+    else
+    {
+        memcpy(tty.ter_type, "IP代理", strlen("IP代理"));
+    }
+
+    if (rand() % 2)
+    {
+        memcpy(tty.ter_state, "正常", strlen("正常"));
+    }
+    else
+    {
+        memcpy(tty.ter_state, "菜单", strlen("菜单"));
+    }
+
+    for (int i = 0; i < tty.scrnum; i++)
+    {
+        scr.no = i + 1;
+        scr.port = htons(g_config.port);
+        scr.ip_addr = htonl(inet_addr(g_config.serverIp.c_str()));
+        scr.con_time = htonl((uint32_t)time(0));
+        const char *state[] = {
+            "开机",
+            "关机",
+            "已登录"};
+        int index = rand() % 3;
+        memcpy(scr.state, state[index], strlen(state[index]));
+
+        memcpy(buf + sizeof(Head) + sizeof(TtyInfo) + i * sizeof(ScreenInfo), &scr, sizeof(ScreenInfo));
+    }
+
+    memcpy(buf + sizeof(Head), &tty, sizeof(TtyInfo));
+
+    int ret = write(sock, buf, sizeof(Head) + datalen);
+    SLog(totlen, ret, "IP终端信息", buf);
 
     return 0;
 }
@@ -849,7 +954,7 @@ int DevClient::SendQueInfo()
     int offset = 0;
     Head head;
     head.origin = CLIENT;
-    head.type = FILE_INFO;
+    head.type = QUE_INFO;
     head.ethport = 0x0000;
 
     u_char buf[9];

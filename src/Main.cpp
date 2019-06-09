@@ -385,7 +385,8 @@ int main(int argc, char **argv)
         cerr << "Need 2 parameters at least : [device id] [client number]" << endl;
         exit(1);
     }
-
+    // É¾³ýxls
+    remove("ts_count.xls");
     int devid = atoi(argv[1]);
     int clinum = atoi(argv[2]);
 
@@ -483,6 +484,12 @@ int main(int argc, char **argv)
                     }
                 }
 
+                uint scrnum = 0;
+                for(uint i = 0; i < client.scrnum_list.size(); i++)
+                {
+                    scrnum += client.scrnum_list[i];
+                }
+                console.xls(client.ttynum, scrnum);
                 return 0;
             }
             else

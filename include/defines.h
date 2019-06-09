@@ -10,6 +10,8 @@
 // 客户端返回状态，关闭连接，定时重连，继续等待
 enum Status{Close, Reconnect, Continue};
 
+#define AUTH_STR "yzmond:id*str&to!tongji@by#Auth^"
+
 struct Config {
     std::string serverIp;    // 服务器IP
     int port;

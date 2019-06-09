@@ -48,7 +48,7 @@ struct AuthReq
     uint16_t resend_time;
     bool allow_void;
     char pad[3];
-    u_char authstr[32];
+    u_char authstr[33];
     uint32_t random_num;
     uint32_t svr_time;
 };
@@ -83,6 +83,12 @@ struct SysInfo
     int sys_time;
     int idle_time;
     int free_mem;
+};
+
+struct TermServ{
+    uint8_t ya_term[16];
+    uint8_t ip_term[254];
+    uint16_t term_num;
 };
 
 struct EthInfo
@@ -125,12 +131,23 @@ struct EthInfo
 
 };
 
+struct TtyInfo
+{
+    uint8_t port;
+    uint8_t config_port;
+    uint8_t act_screen;
+    uint8_t scrnum;
+    u_char ter_ip[4];
+    u_char ter_type[12];
+    u_char ter_state[8];
+};
+
 struct ScreenInfo
 {
     uint8_t no;
     char pad;
     uint16_t port;
-    u_char ip_addr[4];
+    uint32_t ip_addr;
     u_char proto[12];
     u_char state[8];
     u_char info[24];
@@ -149,10 +166,9 @@ class DevClient
 {
 private:
     struct sockaddr_in servaddr;
-    int sock;
     uint32_t devid;
-    uint16_t ttynum;
-    std::vector<uint8_t> scrnum_list;
+    uint8_t async_num;
+    int sock;
 private:
     int ReadFileToBuf(const std::string &, u_char* &databuf, int &buflen);
     void EncryptData(u_char* buf, int random_num, uint buflen);
@@ -177,6 +193,9 @@ private:
     int SendFileInfo();
     int SendQueInfo();
     int SendAck();
+public:
+    uint16_t ttynum;
+    std::vector<uint8_t> scrnum_list;
 public:
     DevClient(uint32_t id);
     ~DevClient();
